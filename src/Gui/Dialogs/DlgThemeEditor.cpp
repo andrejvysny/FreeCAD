@@ -32,25 +32,120 @@
 #include <Base/ServiceProvider.h>
 #include <Base/Tools.h>
 
+#include <StyleParameters/Gradient.h>
+
 #include <ranges>
+#include <QGraphicsEffect>
+#include <QGraphicsItem>
+#include <QGraphicsScene>
 #include <QImageReader>
+#include <QLinearGradient>
 #include <QPainter>
+#include <QRadialGradient>
 #include <QStyledItemDelegate>
 #include <QTimer>
 
+QPixmap applyDropShadow(const QPixmap& source)
+{
+    auto* effect = new QGraphicsDropShadowEffect;
+    effect->setBlurRadius(4);
+    effect->setOffset(QPointF(0.0, 2.0));
+    effect->setColor(QColor(0, 0, 0, 90));
+
+    auto* item = new QGraphicsPixmapItem;
+    item->setPixmap(source);
+    item->setGraphicsEffect(effect);
+
+    QGraphicsScene scene;
+    scene.addItem(item);
+
+    QPixmap result(source.size());
+    result.fill(Qt::transparent);
+    QPainter painter(&result);
+    scene.render(&painter, QRectF(QPointF(), source.size()), QRectF(QPointF(), source.size()));
+    return result;
+}
+
 QPixmap colorPreview(const QColor& color)
 {
-    constexpr qsizetype size = 16;
+    constexpr qsizetype iconSize = 24;
+    constexpr qsizetype shapeSize = 16;
+    constexpr qsizetype shapeX = 4;
+    constexpr qsizetype shapeY = 4;
 
-    QPixmap preview = Gui::BitmapFactory().empty({size, size});
+    QPixmap preview = Gui::BitmapFactory().empty({iconSize, iconSize});
 
-    QPainter painter(&preview);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(color);
-    painter.drawEllipse(QRect {0, 0, size, size});
+    {
+        QPainter painter(&preview);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawEllipse(QRect {shapeX, shapeY, shapeSize, shapeSize});
+    }
 
-    return preview;
+    return applyDropShadow(preview);
+}
+
+QPixmap gradientPreview(const Gui::StyleParameters::Tuple& tuple)
+{
+    constexpr qsizetype iconSize = 24;
+    constexpr qsizetype shapeSize = 16;
+    constexpr qsizetype shapeX = 4;
+    constexpr qsizetype shapeY = 4;
+    constexpr int cornerRadius = 3;
+
+    QPixmap preview = Gui::BitmapFactory().empty({iconSize, iconSize});
+
+    try {
+        QBrush brush;
+
+        if (tuple.kind == Gui::StyleParameters::TupleKind::LinearGradient) {
+            const Gui::StyleParameters::LinearGradient lg(tuple);
+            QLinearGradient qGradient(
+                shapeX + lg.x1() * shapeSize,
+                shapeY + lg.y1() * shapeSize,
+                shapeX + lg.x2() * shapeSize,
+                shapeY + lg.y2() * shapeSize
+            );
+            for (const auto& stop : lg.colorStops()) {
+                qGradient.setColorAt(stop.position.value, stop.color.asValue<QColor>());
+            }
+            brush = QBrush(qGradient);
+        }
+        else if (tuple.kind == Gui::StyleParameters::TupleKind::RadialGradient) {
+            const Gui::StyleParameters::RadialGradient rg(tuple);
+            QRadialGradient qGradient(
+                shapeX + rg.cx() * shapeSize,
+                shapeY + rg.cy() * shapeSize,
+                rg.radius() * shapeSize,
+                shapeX + rg.fx() * shapeSize,
+                shapeY + rg.fy() * shapeSize
+            );
+            for (const auto& stop : rg.colorStops()) {
+                qGradient.setColorAt(stop.position.value, stop.color.asValue<QColor>());
+            }
+            brush = QBrush(qGradient);
+        }
+        else {
+            return preview;
+        }
+
+        {
+            QPainter painter(&preview);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(brush);
+            painter.drawRoundedRect(
+                QRect {shapeX, shapeY, shapeSize, shapeSize},
+                cornerRadius,
+                cornerRadius
+            );
+        }
+    }
+    catch (...) {
+    }
+
+    return applyDropShadow(preview);
 }
 
 QString typeOfTokenValue(const Gui::StyleParameters::Value& value)
@@ -67,8 +162,15 @@ QString typeOfTokenValue(const Gui::StyleParameters::Value& value)
             [](const Base::Color&) {
                 return QWidget::tr("Color");
             },
-            [](const Gui::StyleParameters::Tuple&) {
-                return QWidget::tr("Tuple");
+            [](const Gui::StyleParameters::Tuple& tuple) {
+                switch (tuple.kind) {
+                    case Gui::StyleParameters::TupleKind::LinearGradient:
+                        return QWidget::tr("Linear Gradient");
+                    case Gui::StyleParameters::TupleKind::RadialGradient:
+                        return QWidget::tr("Radial Gradient");
+                    default:
+                        return QWidget::tr("Tuple");
+                }
             }
         },
         value
@@ -302,6 +404,27 @@ public:
         painter->drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, tr("New parameter..."));
     }
 
+    void paintGradientPreview(
+        QPainter* painter,
+        const QStyleOptionViewItem& option,
+        const QModelIndex& index
+    ) const
+    {
+        // Draw background and selection highlight, suppressing text and icon.
+        QStyleOptionViewItem bgOnly(option);
+        bgOnly.text.clear();
+        bgOnly.icon = QIcon();
+        bgOnly.features.setFlag(QStyleOptionViewItem::HasDecoration, false);
+        bgOnly.features.setFlag(QStyleOptionViewItem::HasDisplay, false);
+        QStyledItemDelegate::paint(painter, bgOnly, index);
+
+        // Overlay the gradient bar stretched to the cell with a small margin.
+        constexpr int margin = 3;
+        const QRect drawRect = option.rect.adjusted(margin, margin, -margin, -margin);
+        const QPixmap gradientPixmap = index.data(Qt::UserRole).value<QPixmap>();
+        painter->drawPixmap(drawRect, gradientPixmap, gradientPixmap.rect());
+    }
+
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         auto model = dynamic_cast<const StyleParametersModel*>(index.model());
@@ -329,6 +452,10 @@ public:
 
             painter->fillRect(option.rect, headerBackgroundColor);
             QStyledItemDelegate::paint(painter, option, index);
+        }
+        else if (index.column() == StyleParametersModel::ParameterPreview
+                 && !index.data(Qt::UserRole).value<QPixmap>().isNull()) {
+            paintGradientPreview(painter, opt, index);
         }
         else {
             QStyledItemDelegate::paint(painter, option, index);
@@ -603,9 +730,16 @@ QVariant StyleParametersModel::data(const QModelIndex& index, int role) const
             }
         }
 
-        if (role == Qt::DecorationRole) {
-            if (index.column() == ParameterPreview && std::holds_alternative<Base::Color>(*value)) {
+        if (role == Qt::DecorationRole && index.column() == ParameterPreview) {
+            if (std::holds_alternative<Base::Color>(*value)) {
                 return colorPreview(std::get<Base::Color>(*value).asValue<QColor>());
+            }
+            if (value->holds<StyleParameters::Tuple>()) {
+                const auto& tuple = value->get<StyleParameters::Tuple>();
+                if (tuple.kind == StyleParameters::TupleKind::LinearGradient
+                    || tuple.kind == StyleParameters::TupleKind::RadialGradient) {
+                    return gradientPreview(tuple);
+                }
             }
         }
     }
@@ -632,9 +766,16 @@ QVariant StyleParametersModel::data(const QModelIndex& index, int role) const
             }
         }
 
-        if (role == Qt::DecorationRole) {
-            if (index.column() == ParameterPreview && tupleElementItem->value.holds<Base::Color>()) {
+        if (role == Qt::DecorationRole && index.column() == ParameterPreview) {
+            if (tupleElementItem->value.holds<Base::Color>()) {
                 return colorPreview(tupleElementItem->value.get<Base::Color>().asValue<QColor>());
+            }
+            if (tupleElementItem->value.holds<StyleParameters::Tuple>()) {
+                const auto& tuple = tupleElementItem->value.get<StyleParameters::Tuple>();
+                if (tuple.kind == StyleParameters::TupleKind::LinearGradient
+                    || tuple.kind == StyleParameters::TupleKind::RadialGradient) {
+                    return gradientPreview(tuple);
+                }
             }
         }
     }
@@ -816,7 +957,10 @@ DlgThemeEditor::DlgThemeEditor(QWidget* parent)
     }
 
     ui->tokensTreeView->setColumnWidth(StyleParametersModel::ParameterName, nameColumnWidth);
-    ui->tokensTreeView->expandAll();
+
+    for (int row = 0; row < model->rowCount(QModelIndex()); ++row) {
+        ui->tokensTreeView->expand(model->index(row, 0, QModelIndex()));
+    }
 
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -831,7 +975,9 @@ DlgThemeEditor::DlgThemeEditor(QWidget* parent)
     );
 
     connect(model.get(), &StyleParametersModel::modelReset, ui->tokensTreeView, [this] {
-        ui->tokensTreeView->expandAll();
+        for (int row = 0; row < model->rowCount(QModelIndex()); ++row) {
+            ui->tokensTreeView->expand(model->index(row, 0, QModelIndex()));
+        }
     });
     connect(model.get(), &StyleParametersModel::newParameterAdded, this, [this](const QModelIndex& index) {
         const auto newParameterExpressionIndex = index.siblingAtColumn(
