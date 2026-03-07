@@ -2758,6 +2758,10 @@ void Application::reloadStyleSheet()
 
     d->styleParameterManager->reload();
 
+    if (auto* freeCADStyle = qobject_cast<FreeCADStyle*>(qApp->style())) {
+        freeCADStyle->clearTokenCache();
+    }
+
     setStyleSheet(qssFile, tiledBackground);
     OverlayManager::instance()->refresh(nullptr, true);
 }
