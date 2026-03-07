@@ -31,7 +31,7 @@
 #include <QGroupBox>
 #include <QLineEdit>
 #include <QMenuBar>
-#include <QPushButton>
+#include <QToolButton>
 #include <QRadioButton>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
@@ -47,6 +47,8 @@
 #include "FileDialog.h"
 #include "MainWindow.h"
 #include "Tools.h"
+
+#include <QPushButton>
 
 
 using namespace Gui;
@@ -790,7 +792,8 @@ FileChooser::FileChooser(QWidget* parent)
     connect(lineEdit, &QLineEdit::textChanged, this, &FileChooser::fileNameChanged);
     connect(lineEdit, &QLineEdit::editingFinished, this, &FileChooser::editingFinished);
 
-    button = new QPushButton(QStringLiteral("…"), this);
+    button = new QToolButton(this);
+    button->setText(QStringLiteral("…"));
 
 #if defined(Q_OS_MACOS)
     button->setAttribute(Qt::WA_LayoutUsesWidgetRect);  // layout size from QMacStyle was not correct
