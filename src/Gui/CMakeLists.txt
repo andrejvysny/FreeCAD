@@ -1381,6 +1381,7 @@ SET(FreeCADGui_CPP_SRCS
     FileHandler.cpp
     FileHandler.h
     FreeCADStyle.cpp
+    ThemeReloadEvent.cpp
     GuiApplication.cpp
     GuiApplicationNativeEventAware.cpp
     GuiConsole.cpp
@@ -1420,6 +1421,7 @@ SET(FreeCADGui_SRCS
     ExpressionCompleter.h
     FreeCADGuiInit.py
     FreeCADStyle.h
+    ThemeReloadEvent.h
     StyleToken.h
     GraphicsViewZoom.h
     GuiApplication.h
