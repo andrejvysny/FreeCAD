@@ -160,6 +160,7 @@ Value FunctionCall::evaluate(const EvaluationContext& context) const
             .minLightness = asPercent(resolved.get<Numeric>("min")),
             .maxLightness = asPercent(resolved.get<Numeric>("max")),
             .pivot = asPercent(resolved.get<Numeric>("pivot")),
+            .chromaExponent = asPercent(resolved.get<Numeric>("q")),
         };
     };
 
@@ -182,6 +183,7 @@ Value FunctionCall::evaluate(const EvaluationContext& context) const
             {.name = "min", .defaultValue = Numeric {0.17, ""}},
             {.name = "max", .defaultValue = Numeric {0.97, ""}},
             {.name = "pivot", .defaultValue = Numeric {0.5, ""}},
+            {.name = "q", .defaultValue = Numeric {0.1, ""}},
         }.resolve(args);
 
         auto position = asPercent(resolved.get<Numeric>("lightness"));
@@ -208,6 +210,7 @@ Value FunctionCall::evaluate(const EvaluationContext& context) const
             {.name = "min", .defaultValue = Numeric {0.17, ""}},
             {.name = "max", .defaultValue = Numeric {0.97, ""}},
             {.name = "pivot", .defaultValue = Numeric {0.5, ""}},
+            {.name = "q", .defaultValue = Numeric {0.1, ""}},
         }.resolve(args);
 
         const auto& shadesSpec = resolved.get<Tuple>("shades");
