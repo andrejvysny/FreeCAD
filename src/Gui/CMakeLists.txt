@@ -1420,6 +1420,7 @@ SET(FreeCADGui_SRCS
     ExpressionCompleter.h
     FreeCADGuiInit.py
     FreeCADStyle.h
+    StyleToken.h
     GraphicsViewZoom.h
     GuiApplication.h
     GuiApplicationNativeEventAware.h
