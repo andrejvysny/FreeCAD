@@ -675,6 +675,8 @@ TreeWidget::TreeWidget(const char* name, QWidget* parent)
         _LastSelectedTreeWidget = this;
     }
 
+    setProperty("component", "DocumentTree");
+
     this->setDragEnabled(true);
     this->setAcceptDrops(true);
     this->setColumnCount(3);
