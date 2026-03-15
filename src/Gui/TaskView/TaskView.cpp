@@ -235,7 +235,10 @@ void TaskBox::actionEvent(QActionEvent* e)
 
 TaskPanel::TaskPanel(QWidget* parent)
     : QSint::ActionPanel(parent)
-{}
+{
+    setContentsMargins(QMargins {});
+    layout()->setSpacing(16);
+}
 
 TaskPanel::~TaskPanel() = default;
 
@@ -292,6 +295,7 @@ TaskView::TaskView(QWidget* parent)
     scrollArea->setWidgetResizable(true);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scrollArea->setMinimumWidth(200);
+    scrollArea->setContentsMargins(QMargins {});
     dialogLayout->addWidget(scrollArea, 1);
 
     Gui::Selection().Attach(this);

@@ -207,7 +207,9 @@ QSint--ActionGroup QFrame[class="header"] {
   border-top-right-radius: 3px;
   border-bottom-left-radius: 0px;
   border-bottom-right-radius: 0px;
+  padding: @{padding(vertical: @Spacing.100, horizontal: @Spacing.200)};
 }
+
 QSint--ActionGroup QToolButton[class="header"] {
   text-align: left;
   font-weight: bold;

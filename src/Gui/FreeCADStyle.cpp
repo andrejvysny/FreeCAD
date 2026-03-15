@@ -61,6 +61,8 @@
 #include "QuantitySpinBox_p.h"
 #include "ThemeReloadEvent.h"
 #include "Utilities.h"
+#include "QSint/actionpanel/taskgroup_p.h"
+#include "QSint/actionpanel/taskheader_p.h"
 #include "StyleParameters/Corners.h"
 #include "StyleParameters/Gradient.h"
 #include "StyleParameters/InnerShadow.h"
@@ -2632,6 +2634,18 @@ bool FreeCADStyle::eventFilter(QObject* obj, QEvent* event)
         if (auto* groupBox = qobject_cast<QGroupBox*>(obj)) {
             if (auto* layout = groupBox->layout()) {
                 layout->setContentsMargins(0, 0, 0, 0);
+            }
+        }
+
+        if (auto* taskHeader = qobject_cast<QSint::TaskHeader*>(obj)) {
+            if (auto* layout = taskHeader->layout()) {
+                layout->setContentsMargins(0, 0, 0, 0);
+            }
+        }
+
+        if (auto* taskGroup = qobject_cast<QSint::TaskGroup*>(obj)) {
+            if (auto* layout = taskGroup->layout()) {
+                layout->setContentsMargins(4, 4, 4, 4);
             }
         }
 
