@@ -1477,10 +1477,8 @@ void FreeCADStyle::drawToolButtonLabel(
             painter,
             option->icon,
             shiftedRect.size().boundedTo(option->iconSize),
-            iconModeOf(option),
-            iconStateOf(option),
-            context,
-            option->palette
+            option,
+            context
         );
 
         if (!pixmap.isNull()) {
@@ -1502,10 +1500,8 @@ void FreeCADStyle::drawToolButtonLabel(
             painter,
             option->icon,
             shiftedContentRect.size().boundedTo(option->iconSize),
-            iconModeOf(option),
-            iconStateOf(option),
-            context,
-            option->palette
+            option,
+            context
         );
         pixmapSize = pixmap.size() / painter->device()->devicePixelRatio();
     }
@@ -1625,10 +1621,8 @@ void FreeCADStyle::drawPushButtonLabel(
         painter,
         option->icon,
         shiftedContentRect.size().boundedTo(option->iconSize),
-        iconModeOf(option),
-        iconStateOf(option),
-        context,
-        option->palette
+        option,
+        context
     );
     const QSize pixmapSize = pixmap.size() / painter->device()->devicePixelRatio();
 
@@ -1814,15 +1808,8 @@ void FreeCADStyle::drawTabBarTabLabel(
 
     const QRect contentRect = geometry.contentRect(visualRect);
 
-    const QPixmap pixmap = renderStyledIcon(
-        painter,
-        option->icon,
-        option->iconSize,
-        iconModeOf(option),
-        iconStateOf(option),
-        tabContext,
-        option->palette
-    );
+    const QPixmap pixmap
+        = renderStyledIcon(painter, option->icon, option->iconSize, option, tabContext);
     const QSize pixmapSize = pixmap.size() / painter->device()->devicePixelRatio();
 
     const int iconSpacing = geometry.iconSpacing;
@@ -2004,6 +1991,25 @@ QPixmap FreeCADStyle::renderStyledIcon(
             .mode = mode,
             .state = state,
         }
+    );
+}
+
+QPixmap FreeCADStyle::renderStyledIcon(
+    QPainter* painter,
+    const QIcon& icon,
+    const QSize& maxSize,
+    const QStyleOption* option,
+    const StyleContext& context
+) const
+{
+    return renderStyledIcon(
+        painter,
+        icon,
+        maxSize,
+        iconModeOf(option),
+        iconStateOf(option),
+        context,
+        option->palette
     );
 }
 
