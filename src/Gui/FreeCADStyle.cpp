@@ -1479,40 +1479,15 @@ void FreeCADStyle::drawToolButtonLabel(
             return;
         }
 
-        QRect shiftedRect = contentRect;
-        if (option->state & (State_Sunken | State_On)) {
-            shiftedRect.translate(
-                proxy()->pixelMetric(PM_ButtonShiftHorizontal, option, widget),
-                proxy()->pixelMetric(PM_ButtonShiftVertical, option, widget)
-            );
-        }
-
-        const QIcon::State iconState = (option->state & State_On) ? QIcon::On : QIcon::Off;
-        QIcon::Mode iconMode = QIcon::Normal;
-        if (!(option->state & State_Enabled)) {
-            iconMode = QIcon::Disabled;
-        }
-        else if ((option->state & State_MouseOver) && (option->state & State_AutoRaise)) {
-            iconMode = QIcon::Active;
-        }
-
-        QColor iconColor = option->palette.buttonText().color();
-        if (const auto color = resolve<Base::Color>(context, StyleProperty::IconColor)) {
-            iconColor = color->asValue<QColor>();
-        }
-        else if (const auto color = resolve<Base::Color>(context, StyleProperty::TextColor)) {
-            iconColor = color->asValue<QColor>();
-        }
-
-        const QPixmap pixmap = IconManager::instance().render(
+        const QRect shiftedRect = applyButtonShift(contentRect, option, widget);
+        const QPixmap pixmap = renderStyledIcon(
+            painter,
             option->icon,
-            {
-                .size = shiftedRect.size().boundedTo(option->iconSize),
-                .dpr = painter->device()->devicePixelRatio(),
-                .color = iconColor,
-                .mode = iconMode,
-                .state = iconState,
-            }
+            shiftedRect.size().boundedTo(option->iconSize),
+            iconModeOf(option),
+            iconStateOf(option),
+            context,
+            option->palette
         );
 
         if (!pixmap.isNull()) {
@@ -1523,44 +1498,21 @@ void FreeCADStyle::drawToolButtonLabel(
 
     const int iconSpacing = geometry.iconSpacing;
 
-    // Apply pressed/checked shift — we manage layout so we do this ourselves.
-    QRect shiftedContentRect = contentRect;
-    if (option->state & (State_Sunken | State_On)) {
-        shiftedContentRect.translate(
-            proxy()->pixelMetric(PM_ButtonShiftHorizontal, option, widget),
-            proxy()->pixelMetric(PM_ButtonShiftVertical, option, widget)
-        );
-    }
+    const QRect shiftedContentRect = applyButtonShift(contentRect, option, widget);
 
     const bool hasArrow = option->arrowType != Qt::NoArrow;
 
     QPixmap pixmap;
     QSize pixmapSize = option->iconSize;
     if (!hasArrow && !option->icon.isNull()) {
-        const QIcon::State iconState = (option->state & State_On) ? QIcon::On : QIcon::Off;
-        QIcon::Mode iconMode = QIcon::Normal;
-        if (!(option->state & State_Enabled)) {
-            iconMode = QIcon::Disabled;
-        }
-        else if ((option->state & State_MouseOver) && (option->state & State_AutoRaise)) {
-            iconMode = QIcon::Active;
-        }
-        QColor iconColor = option->palette.buttonText().color();
-        if (const auto color = resolve<Base::Color>(context, StyleProperty::IconColor)) {
-            iconColor = color->asValue<QColor>();
-        }
-        else if (const auto color = resolve<Base::Color>(context, StyleProperty::TextColor)) {
-            iconColor = color->asValue<QColor>();
-        }
-        pixmap = IconManager::instance().render(
+        pixmap = renderStyledIcon(
+            painter,
             option->icon,
-            {
-                .size = shiftedContentRect.size().boundedTo(option->iconSize),
-                .dpr = painter->device()->devicePixelRatio(),
-                .color = iconColor,
-                .mode = iconMode,
-                .state = iconState,
-            }
+            shiftedContentRect.size().boundedTo(option->iconSize),
+            iconModeOf(option),
+            iconStateOf(option),
+            context,
+            option->palette
         );
         pixmapSize = pixmap.size() / painter->device()->devicePixelRatio();
     }
@@ -1585,10 +1537,7 @@ void FreeCADStyle::drawToolButtonLabel(
         proxy()->drawPrimitive(primitive, &arrowOpt, painter, widget);
     };
 
-    int textFlags = Qt::TextShowMnemonic;
-    if (!proxy()->styleHint(SH_UnderlineShortcut, option, widget)) {
-        textFlags |= Qt::TextHideMnemonic;
-    }
+    const int textFlags = mnemonicTextFlags(option, widget);
 
     painter->save();
     painter->setFont(option->font);
@@ -1676,34 +1625,17 @@ void FreeCADStyle::drawPushButtonLabel(
     }
 
     // Icon + text: custom layout with token icon spacing.
-    QRect shiftedContentRect = contentRect;
-    if (option->state & (State_Sunken | State_On)) {
-        shiftedContentRect.translate(
-            proxy()->pixelMetric(PM_ButtonShiftHorizontal, option, widget),
-            proxy()->pixelMetric(PM_ButtonShiftVertical, option, widget)
-        );
-    }
-
+    const QRect shiftedContentRect = applyButtonShift(contentRect, option, widget);
     const int iconSpacing = geometry.iconSpacing;
 
-    const QIcon::State iconState = (option->state & State_On) ? QIcon::On : QIcon::Off;
-    const QIcon::Mode iconMode = (option->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled;
-    QColor iconColor = option->palette.buttonText().color();
-    if (const auto color = resolve<Base::Color>(context, StyleProperty::IconColor)) {
-        iconColor = color->asValue<QColor>();
-    }
-    else if (const auto color = resolve<Base::Color>(context, StyleProperty::TextColor)) {
-        iconColor = color->asValue<QColor>();
-    }
-    const QPixmap pixmap = IconManager::instance().render(
+    const QPixmap pixmap = renderStyledIcon(
+        painter,
         option->icon,
-        {
-            .size = shiftedContentRect.size().boundedTo(option->iconSize),
-            .dpr = painter->device()->devicePixelRatio(),
-            .color = iconColor,
-            .mode = iconMode,
-            .state = iconState,
-        }
+        shiftedContentRect.size().boundedTo(option->iconSize),
+        iconModeOf(option),
+        iconStateOf(option),
+        context,
+        option->palette
     );
     const QSize pixmapSize = pixmap.size() / painter->device()->devicePixelRatio();
 
@@ -1712,6 +1644,7 @@ void FreeCADStyle::drawPushButtonLabel(
     const int groupWidth = pixmapSize.width() + iconSpacing + textWidth;
     const int groupLeft = shiftedContentRect.left() + (shiftedContentRect.width() - groupWidth) / 2;
 
+    const int textLeft = groupLeft + pixmapSize.width() + iconSpacing;
     const QRect iconRect(
         groupLeft,
         shiftedContentRect.top() + (shiftedContentRect.height() - pixmapSize.height()) / 2,
@@ -1719,16 +1652,13 @@ void FreeCADStyle::drawPushButtonLabel(
         pixmapSize.height()
     );
     const QRect textRect(
-        groupLeft + pixmapSize.width() + iconSpacing,
+        textLeft,
         shiftedContentRect.top(),
-        shiftedContentRect.right() - (groupLeft + pixmapSize.width() + iconSpacing),
+        shiftedContentRect.right() - textLeft,
         shiftedContentRect.height()
     );
 
-    int textFlags = Qt::TextShowMnemonic | Qt::AlignVCenter | Qt::AlignLeft;
-    if (!proxy()->styleHint(SH_UnderlineShortcut, option, widget)) {
-        textFlags |= Qt::TextHideMnemonic;
-    }
+    const int textFlags = mnemonicTextFlags(option, widget) | Qt::AlignVCenter | Qt::AlignLeft;
 
     painter->save();
     proxy()->drawItemPixmap(painter, iconRect, Qt::AlignCenter, pixmap);
@@ -1794,10 +1724,7 @@ void FreeCADStyle::drawComboBoxLabel(
         editFieldRect.height()
     );
 
-    int textFlags = Qt::TextShowMnemonic | Qt::AlignVCenter | Qt::AlignLeft;
-    if (!proxy()->styleHint(SH_UnderlineShortcut, option, widget)) {
-        textFlags |= Qt::TextHideMnemonic;
-    }
+    const int textFlags = mnemonicTextFlags(option, widget) | Qt::AlignVCenter | Qt::AlignLeft;
 
     painter->save();
     painter->setClipRect(editFieldRect);
@@ -1846,16 +1773,7 @@ void FreeCADStyle::drawTabBarTab(QPainter* painter, const QStyleOptionTab* optio
                                         : proxy()->pixelMetric(PM_TabBarTabOverlap, option, widget);
     const bool isVertical = (position == Position::East || position == Position::West);
 
-    QRect drawRect = option->rect;
-    if (tabOverlap != 0) {
-        if (isVertical) {
-            drawRect = drawRect.adjusted(0, 0, 0, tabOverlap);
-        }
-        else {
-            drawRect = drawRect.adjusted(0, 0, tabOverlap, 0);
-        }
-    }
-
+    const QRect drawRect = tabVisualRect(option->rect, tabOverlap, isVertical);
     drawBoxBackground(painter, drawRect, style);
 }
 
@@ -1871,6 +1789,8 @@ void FreeCADStyle::drawTabBarTabLabel(
     const bool hasIcon = !option->icon.isNull();
     const bool hasText = !option->text.isEmpty();
 
+    const StyleContext tabContext = contextOf(widget, option, StyleComponentElement::Tab);
+
     // The background is drawn on a rect shrunk by |tabOverlap| on the trailing edge (see
     // drawTabBarTab). To keep content padding symmetric relative to the visible background,
     // base all content geometry on the same visual rect.
@@ -1878,24 +1798,15 @@ void FreeCADStyle::drawTabBarTabLabel(
         || option->position == QStyleOptionTab::OnlyOneTab;
     const int tabOverlap = isLastOrOnly ? 0
                                         : proxy()->pixelMetric(PM_TabBarTabOverlap, option, widget);
-    QRect visualRect = option->rect;
-    if (tabOverlap != 0) {
-        if (isVertical) {
-            visualRect = option->rect.adjusted(0, 0, 0, tabOverlap);
-        }
-        else {
-            visualRect = option->rect.adjusted(0, 0, tabOverlap, 0);
-        }
-    }
+    const QRect visualRect = tabVisualRect(option->rect, tabOverlap, isVertical);
 
     // For vertical tabs or non-icon+text tabs, delegate to parent. Apply token text color by
     // setting palette ButtonText so Qt's draw path picks it up automatically. Use visualRect so
     // Qt's tabLayout sees the same bounds as the background.
     if (isVertical || !hasIcon || !hasText) {
-        const StyleContext labelContext = contextOf(widget, option, StyleComponentElement::Tab);
         QStyleOptionTab adjusted = *option;
         adjusted.rect = visualRect;
-        if (const auto color = resolve<Base::Color>(labelContext, StyleProperty::TextColor)) {
+        if (const auto color = resolve<Base::Color>(tabContext, StyleProperty::TextColor)) {
             adjusted.palette.setColor(QPalette::All, QPalette::ButtonText, color->asValue<QColor>());
         }
         QProxyStyle::drawControl(CE_TabBarTabLabel, &adjusted, painter, widget);
@@ -1904,19 +1815,20 @@ void FreeCADStyle::drawTabBarTabLabel(
 
     // Geometry is always resolved in the canonical North context (PM_TabBarTabHSpace/VSpace does
     // the same: the tab size is computed in North space and transposed by QTabBar for East/West).
-    StyleContext geometryContext = contextOf(widget, option, StyleComponentElement::Tab);
+    StyleContext geometryContext = tabContext;
     geometryContext.variant.set(VariantSlot::Position, Position::North);
     const BoxGeometryDefinition geometry = resolveBoxGeometry(geometryContext);
 
     const QRect contentRect = geometry.contentRect(visualRect);
 
-    const QIcon::State iconState = (option->state & State_On) ? QIcon::On : QIcon::Off;
-    const QIcon::Mode iconMode = (option->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled;
-    const QPixmap pixmap = option->icon.pixmap(
+    const QPixmap pixmap = renderStyledIcon(
+        painter,
+        option->icon,
         option->iconSize,
-        painter->device()->devicePixelRatio(),
-        iconMode,
-        iconState
+        iconModeOf(option),
+        iconStateOf(option),
+        tabContext,
+        option->palette
     );
     const QSize pixmapSize = pixmap.size() / painter->device()->devicePixelRatio();
 
@@ -1930,17 +1842,12 @@ void FreeCADStyle::drawTabBarTabLabel(
     );
     const QRect textRect = contentRect.adjusted(pixmapSize.width() + iconSpacing, 0, 0, 0);
 
-    int textFlags = Qt::TextShowMnemonic;
-    if (!proxy()->styleHint(SH_UnderlineShortcut, option, widget)) {
-        textFlags |= Qt::TextHideMnemonic;
-    }
+    const int textFlags = mnemonicTextFlags(option, widget);
 
     painter->save();
 
-    // Resolve tab text color from design tokens; fall back to palette ButtonText.
-    const StyleContext labelContext = contextOf(widget, option, StyleComponentElement::Tab);
     QPalette::ColorRole textRole = QPalette::ButtonText;
-    if (const auto color = resolve<Base::Color>(labelContext, StyleProperty::TextColor)) {
+    if (const auto color = resolve<Base::Color>(tabContext, StyleProperty::TextColor)) {
         painter->setPen(color->asValue<QColor>());
         textRole = QPalette::NoRole;
     }
