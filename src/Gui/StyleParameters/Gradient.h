@@ -161,7 +161,7 @@ protected:
     static Tuple::Element makeGeometryElement(const char* name, double defaultValue, const Tuple& args)
     {
         const Value* found = args.find(name);
-        double value = found ? found->get<Numeric>().value : defaultValue;
+        double value = found ? static_cast<double>(found->get<Numeric>()) : defaultValue;
         return Tuple::Element::named(name, Numeric {.value = value, .unit = ""});
     }
 
@@ -208,7 +208,7 @@ protected:
                     THROWM(Base::ExpressionError, "Gradient stop tuple must be (position, color)");
                 }
                 rawStops.push_back({
-                    .position = stopTuple.at(0).get<Numeric>().value,
+                    .position = static_cast<double>(stopTuple.at(0).get<Numeric>()),
                     .color = stopTuple.at(1).get<Base::Color>(),
                 });
             }
@@ -275,19 +275,19 @@ public:
 
     double x1() const
     {
-        return tuple_.get<Numeric>("x1").value;
+        return static_cast<double>(tuple_.get<Numeric>("x1"));
     }
     double y1() const
     {
-        return tuple_.get<Numeric>("y1").value;
+        return static_cast<double>(tuple_.get<Numeric>("y1"));
     }
     double x2() const
     {
-        return tuple_.get<Numeric>("x2").value;
+        return static_cast<double>(tuple_.get<Numeric>("x2"));
     }
     double y2() const
     {
-        return tuple_.get<Numeric>("y2").value;
+        return static_cast<double>(tuple_.get<Numeric>("y2"));
     }
 
     static constexpr TupleKind kind()
@@ -334,23 +334,23 @@ public:
 
     double cx() const
     {
-        return tuple_.get<Numeric>("cx").value;
+        return static_cast<double>(tuple_.get<Numeric>("cx"));
     }
     double cy() const
     {
-        return tuple_.get<Numeric>("cy").value;
+        return static_cast<double>(tuple_.get<Numeric>("cy"));
     }
     double radius() const
     {
-        return tuple_.get<Numeric>("radius").value;
+        return static_cast<double>(tuple_.get<Numeric>("radius"));
     }
     double fx() const
     {
-        return tuple_.get<Numeric>("fx").value;
+        return static_cast<double>(tuple_.get<Numeric>("fx"));
     }
     double fy() const
     {
-        return tuple_.get<Numeric>("fy").value;
+        return static_cast<double>(tuple_.get<Numeric>("fy"));
     }
 
     static constexpr TupleKind kind()
@@ -367,13 +367,13 @@ private:
 
         const Value* cxFound = args.find("cx");
         const Value* cyFound = args.find("cy");
-        double cxValue = cxFound ? cxFound->get<Numeric>().value : defaultCenter;
-        double cyValue = cyFound ? cyFound->get<Numeric>().value : defaultCenter;
+        double cxValue = cxFound ? static_cast<double>(cxFound->get<Numeric>()) : defaultCenter;
+        double cyValue = cyFound ? static_cast<double>(cyFound->get<Numeric>()) : defaultCenter;
 
         const Value* fxFound = args.find("fx");
         const Value* fyFound = args.find("fy");
-        double fxValue = fxFound ? fxFound->get<Numeric>().value : cxValue;
-        double fyValue = fyFound ? fyFound->get<Numeric>().value : cyValue;
+        double fxValue = fxFound ? static_cast<double>(fxFound->get<Numeric>()) : cxValue;
+        double fyValue = fyFound ? static_cast<double>(fyFound->get<Numeric>()) : cyValue;
 
         return Tuple(
             {
