@@ -83,6 +83,7 @@ extern Q_WIDGETS_EXPORT void qt_blurImage(
 QT_END_NAMESPACE
 
 using namespace Gui;
+using namespace Gui::StyleParameters;
 
 // ─── FreeCADStyle constructor / destructor ────────────────────────────────
 
@@ -128,9 +129,7 @@ namespace Base
 {
 
 template<>
-FreeCADStyle::CornerRadii convertTo<FreeCADStyle::CornerRadii, StyleParameters::Corners>(
-    const StyleParameters::Corners& corners
-)
+FreeCADStyle::CornerRadii convertTo<FreeCADStyle::CornerRadii, Corners>(const Corners& corners)
 {
     return {
         .topLeft = corners.topLeft().value,
@@ -141,9 +140,7 @@ FreeCADStyle::CornerRadii convertTo<FreeCADStyle::CornerRadii, StyleParameters::
 }
 
 template<>
-FreeCADStyle::InnerShadow convertTo<FreeCADStyle::InnerShadow, StyleParameters::InnerShadow>(
-    const StyleParameters::InnerShadow& shadow
-)
+FreeCADStyle::InnerShadow convertTo<FreeCADStyle::InnerShadow, InnerShadow>(const InnerShadow& shadow)
 {
     return {
         .color = shadow.color().asValue<QColor>(),
@@ -613,7 +610,7 @@ std::optional<int> FreeCADStyle::resolvePixelMetric(
             StyleContext northContext = element(StyleComponentElement::Tab);
             northContext.variant.set(VariantSlot::Position, Position::North);
 
-            if (const auto padding = resolve<StyleParameters::Insets>(northContext, Padding)) {
+            if (const auto padding = resolve<Insets>(northContext, Padding)) {
                 return static_cast<int>(
                     metric == PM_TabBarTabHSpace ? padding->horizontal() : padding->vertical()
                 );
@@ -696,7 +693,7 @@ void FreeCADStyle::drawRadioButtonDot(
 
     constexpr qreal dotPaddingRatio = 0.2;  // fallback: fraction of indicator width
     qreal padding = static_cast<qreal>(rect.width()) * dotPaddingRatio;
-    if (const auto paddings = resolve<StyleParameters::Insets>(context, StyleProperty::Padding)) {
+    if (const auto paddings = resolve<Insets>(context, StyleProperty::Padding)) {
         padding = paddings->left().value;
     }
 
@@ -717,7 +714,7 @@ void FreeCADStyle::drawCheckMark(
     constexpr qreal checkMinPenWidth = 1.5;     // minimum stroke width in pixels
 
     qreal padding = static_cast<qreal>(rect.width()) * checkPaddingRatio;
-    if (const auto paddings = resolve<StyleParameters::Insets>(context, StyleProperty::Padding)) {
+    if (const auto paddings = resolve<Insets>(context, StyleProperty::Padding)) {
         padding = paddings->left().value;
     }
 
@@ -755,7 +752,7 @@ void FreeCADStyle::drawIndeterminateMark(
     constexpr qreal checkMinPenWidth = 1.5;     // minimum stroke width in pixels
 
     qreal padding = static_cast<qreal>(rect.width()) * checkPaddingRatio;
-    if (const auto paddings = resolve<StyleParameters::Insets>(context, StyleProperty::Padding)) {
+    if (const auto paddings = resolve<Insets>(context, StyleProperty::Padding)) {
         padding = paddings->left().value;
     }
 
@@ -1169,7 +1166,7 @@ QRect FreeCADStyle::toolButtonSubControlRect(
     const QRect rect = option->rect;
 
     int menuWidth = proxy()->pixelMetric(PM_MenuButtonIndicator, option, widget);
-    if (const auto token = resolve<StyleParameters::Numeric>(context, StyleProperty::MenuWidth)) {
+    if (const auto token = resolve<Numeric>(context, StyleProperty::MenuWidth)) {
         menuWidth = static_cast<int>(*token);
     }
 
@@ -1474,10 +1471,10 @@ void FreeCADStyle::drawToolButtonLabel(
 
     const Qt::ToolButtonStyle tbStyle = option->toolButtonStyle;
     const bool hasIconOrArrow = !option->icon.isNull() || option->arrowType != Qt::NoArrow;
-    const bool needsCustomLayout = hasIconOrArrow && !option->text.isEmpty()
+    const bool hasText = hasIconOrArrow && !option->text.isEmpty()
         && (tbStyle == Qt::ToolButtonTextBesideIcon || tbStyle == Qt::ToolButtonTextUnderIcon);
 
-    if (!needsCustomLayout) {
+    if (!hasText) {
         // Icon-only with a real (non-arrow) icon: draw it ourselves so the
         // token-based icon color is applied. Text-only, arrow-only, and
         // ToolButtonTextOnly always delegate — we have nothing to colour there.
@@ -1757,12 +1754,10 @@ void FreeCADStyle::drawTabBarTab(QPainter* painter, const QStyleOptionTab* optio
 
     BoxStyleDefinition style = resolveBoxStyle(positionContext);
 
-    if (const auto corners
-        = resolve<StyleParameters::Corners>(northContext, StyleProperty::BorderRadius)) {
+    if (const auto corners = resolve<Corners>(northContext, StyleProperty::BorderRadius)) {
         style.borderRadius = rotated(Base::convertTo<CornerRadii>(*corners), position);
     }
-    if (const auto thickness
-        = resolve<StyleParameters::Insets>(northContext, StyleProperty::BorderThickness)) {
+    if (const auto thickness = resolve<Insets>(northContext, StyleProperty::BorderThickness)) {
         style.borderThickness = rotated(Base::convertTo<QMarginsF>(*thickness), position);
     }
 
@@ -1878,8 +1873,7 @@ FreeCADStyle::BoxStyleDefinition FreeCADStyle::resolveBaseStripStyle(
     if (const auto background = resolve(northContext, StyleProperty::Background)) {
         style.background = rotated(Base::convertTo<QBrush>(*background), position);
     }
-    if (const auto thickness
-        = resolve<StyleParameters::Insets>(northContext, StyleProperty::BorderThickness)) {
+    if (const auto thickness = resolve<Insets>(northContext, StyleProperty::BorderThickness)) {
         style.borderThickness = rotated(Base::convertTo<QMarginsF>(*thickness), position);
     }
 
@@ -1915,8 +1909,8 @@ void FreeCADStyle::drawTabWidgetFrame(QPainter* painter, const QStyleOptionTabWi
     stripContext.variant.set(VariantSlot::Position, position);
 
     const int stripHeight = [&]() -> int {
-        if (const auto height = resolve<StyleParameters::Numeric>(stripContext, StyleProperty::Height)) {
-            return static_cast<int>(height->value);
+        if (const auto height = resolve<Numeric>(stripContext, StyleProperty::Height)) {
+            return static_cast<int>(*height);
         }
         return 0;
     }();
@@ -1945,14 +1939,12 @@ void FreeCADStyle::drawTabWidgetFrame(QPainter* painter, const QStyleOptionTabWi
     drawBoxBackground(painter, stripRect, stripStyle);
 }
 
-std::optional<StyleParameters::Value> FreeCADStyle::resolve(std::string_view name) const
+std::optional<Value> FreeCADStyle::resolve(std::string_view name) const
 {
     return Application::Instance->styleParameterManager()->resolve(std::string(name));
 }
 
-std::optional<StyleParameters::Value> FreeCADStyle::resolve(
-    std::initializer_list<std::string_view> names
-) const
+std::optional<Value> FreeCADStyle::resolve(std::initializer_list<std::string_view> names) const
 {
     for (const std::string_view name : names) {
         if (auto value = resolve(name)) {
@@ -1962,7 +1954,7 @@ std::optional<StyleParameters::Value> FreeCADStyle::resolve(
     return std::nullopt;
 }
 
-std::optional<StyleParameters::Value> FreeCADStyle::resolve(
+std::optional<Value> FreeCADStyle::resolve(
     std::initializer_list<std::string_view> prefixes,
     std::string_view suffix
 ) const
@@ -2085,8 +2077,8 @@ void FreeCADStyle::drawComponent(
 void FreeCADStyle::drawSeparatorLine(QPainter* painter, const QRect& rect, bool isHorizontal) const
 {
     int thickness = 1;
-    if (const auto numeric = resolve<StyleParameters::Numeric>("SeparatorThickness")) {
-        thickness = static_cast<int>(numeric->value);
+    if (const auto numeric = resolve<Numeric>("SeparatorThickness")) {
+        thickness = static_cast<int>(*numeric);
     }
     if (const auto color = resolve<Base::Color>("SeparatorColor")) {
         const QRect lineRect = isHorizontal
