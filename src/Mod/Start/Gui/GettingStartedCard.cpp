@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2025 Alfredo Monclus <alfredomonclus@gmail.com>          *
+ *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -21,42 +21,38 @@
  *                                                                          *
  ***************************************************************************/
 
-#pragma once
-
+#include <QFont>
 #include <QLabel>
-#include <QString>
-#include <QPushButton>
-#include <QHBoxLayout>
 #include <QVBoxLayout>
 
-#include <App/Application.h>
+#include "GettingStartedCard.h"
 
-namespace StartGui
+using namespace StartGui;
+
+GettingStartedCard::GettingStartedCard(QWidget* parent)
+    : QFrame(parent)
+    , _titleLabel(new QLabel(this))
+    , _bodyLabel(new QLabel(this))
 {
+    setObjectName(QStringLiteral("gettingStartedCard"));
 
-struct NewButton
-{
-    QString heading;
-    QString description;
-    QString iconPath;
-};
+    auto* layout = new QVBoxLayout(this);
 
-class NewFileButton: public QPushButton
-{
-public:
-    explicit NewFileButton(const NewButton& newButton, bool compact = false);
+    _titleLabel->setObjectName(QStringLiteral("startSectionLabel"));
+    QFont titleFont = _titleLabel->font();
+    titleFont.setBold(true);
+    _titleLabel->setFont(titleFont);
+    _titleLabel->setText(tr("GETTING STARTED"));
 
-private:
-    bool isCompact;
-    int iconSize;
-    int labelWidth;
-    QHBoxLayout* mainLayout;
-    QVBoxLayout* textLayout;
-    QLabel* headingLabel;
-    QLabel* descriptionLabel;
+    _bodyLabel->setWordWrap(true);
+    _bodyLabel->setOpenExternalLinks(true);
+    _bodyLabel->setTextFormat(Qt::RichText);
+    _bodyLabel->setText(
+        tr("New to FreeCAD? Start by creating a <b>Parametric body</b>, then add a sketch to a "
+           "face. The <a href=\"https://wiki.freecad.org/Getting_started\">beginner tutorial</a> "
+           "walks you through your first part in 5 minutes.")
+    );
 
-protected:
-    QSize minimumSizeHint() const override;
-};
-
-}  // namespace StartGui
+    layout->addWidget(_titleLabel);
+    layout->addWidget(_bodyLabel);
+}

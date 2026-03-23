@@ -33,18 +33,50 @@ RecentFilesModel::RecentFilesModel(QObject* parent)
     _parameterGroup = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/RecentFiles"
     );
+    _startParameterGroup = App::GetApplication().GetParameterGroupByPath(
+        "User parameter:BaseApp/Preferences/Mod/Start"
+    );
+    loadPinnedFiles();
+}
+
+QVariant RecentFilesModel::data(const QModelIndex& index, int role) const
+{
+    if (role == static_cast<int>(DisplayedFilesModelRoles::pinned)) {
+        auto path = DisplayedFilesModel::data(index, static_cast<int>(DisplayedFilesModelRoles::path)).toString();
+        return _pinnedPaths.contains(path);
+    }
+    return DisplayedFilesModel::data(index, role);
 }
 
 void RecentFilesModel::loadRecentFiles()
 {
     beginResetModel();
     clear();
+
+    // Collect all file paths, separating pinned from unpinned
+    QStringList pinnedFiles;
+    QStringList unpinnedFiles;
+
     auto numRows {_parameterGroup->GetInt("RecentFiles", 0)};
     for (int i = 0; i < numRows; ++i) {
         auto entry = fmt::format("MRU{}", i);
-        auto path = _parameterGroup->GetASCII(entry.c_str(), "");
-        addFile(QString::fromStdString(path));
+        auto path = QString::fromStdString(_parameterGroup->GetASCII(entry.c_str(), ""));
+        if (_pinnedPaths.contains(path)) {
+            pinnedFiles.append(path);
+        }
+        else {
+            unpinnedFiles.append(path);
+        }
     }
+
+    // Add pinned files first, then unpinned
+    for (const auto& path : pinnedFiles) {
+        addFile(path);
+    }
+    for (const auto& path : unpinnedFiles) {
+        addFile(path);
+    }
+
     endResetModel();
 }
 
@@ -52,4 +84,48 @@ void RecentFilesModel::recentFileAdded(const QString& filename)
 {
     Q_UNUSED(filename)
     loadRecentFiles();
+}
+
+bool RecentFilesModel::isPinned(const QString& path) const
+{
+    return _pinnedPaths.contains(path);
+}
+
+void RecentFilesModel::togglePinned(const QString& path)
+{
+    if (_pinnedPaths.contains(path)) {
+        _pinnedPaths.remove(path);
+    }
+    else {
+        _pinnedPaths.insert(path);
+    }
+    savePinnedFiles();
+    loadRecentFiles();
+}
+
+void RecentFilesModel::loadPinnedFiles()
+{
+    _pinnedPaths.clear();
+    auto pinnedGrp = _startParameterGroup->GetGroup("PinnedFiles");
+    auto numPinned = pinnedGrp->GetInt("Count", 0);
+    for (int i = 0; i < numPinned; ++i) {
+        auto entry = fmt::format("File{}", i);
+        auto path = pinnedGrp->GetASCII(entry.c_str(), "");
+        if (!path.empty()) {
+            _pinnedPaths.insert(QString::fromStdString(path));
+        }
+    }
+}
+
+void RecentFilesModel::savePinnedFiles()
+{
+    auto pinnedGrp = _startParameterGroup->GetGroup("PinnedFiles");
+    pinnedGrp->Clear();
+    pinnedGrp->SetInt("Count", static_cast<long>(_pinnedPaths.size()));
+    int i = 0;
+    for (const auto& path : _pinnedPaths) {
+        auto entry = fmt::format("File{}", i);
+        pinnedGrp->SetASCII(entry.c_str(), path.toStdString().c_str());
+        ++i;
+    }
 }

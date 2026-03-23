@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2025 Alfredo Monclus <alfredomonclus@gmail.com>          *
+ *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -23,40 +23,19 @@
 
 #pragma once
 
-#include <QLabel>
-#include <QString>
-#include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-
-#include <App/Application.h>
+#include <QWidget>
 
 namespace StartGui
 {
 
-struct NewButton
-{
-    QString heading;
-    QString description;
-    QString iconPath;
-};
-
-class NewFileButton: public QPushButton
+class LearnLinksWidget: public QWidget
 {
 public:
-    explicit NewFileButton(const NewButton& newButton, bool compact = false);
+    explicit LearnLinksWidget(QWidget* parent = nullptr);
 
 private:
-    bool isCompact;
-    int iconSize;
-    int labelWidth;
-    QHBoxLayout* mainLayout;
-    QVBoxLayout* textLayout;
-    QLabel* headingLabel;
-    QLabel* descriptionLabel;
-
-protected:
-    QSize minimumSizeHint() const override;
+    static QString releaseNotesUrl();
+    static QString whatsNewLabel();
 };
 
 }  // namespace StartGui

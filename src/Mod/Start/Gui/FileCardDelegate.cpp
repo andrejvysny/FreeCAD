@@ -25,17 +25,18 @@
 #include <QFileIconProvider>
 #include <QImageReader>
 #include <QPainter>
+#include <QPen>
 #include <QStyleOptionViewItem>
 #include <QLabel>
 #include <QModelIndex>
 #include <QVBoxLayout>
 #include <QApplication>
-#include <QPushButton>
 #include <QString>
 #include <QAbstractItemView>
 
 #include "FileCardDelegate.h"
 #include "../App/DisplayedFilesModel.h"
+#include "../App/FileUtilities.h"
 #include "App/Application.h"
 #include <Base/Color.h>
 #include <Base/Console.h>
@@ -68,37 +69,94 @@ FileCardDelegate::FileCardDelegate(QObject* parent)
     }
 }
 
+void FileCardDelegate::paintOpenFileCard(
+    QPainter* painter,
+    const QStyleOptionViewItem& option
+) const
+{
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing);
+
+    auto thumbnailSize = static_cast<int>(_parameterGroup->GetInt("FileThumbnailIconsSize", 128));
+
+    // Card background
+    QColor cardBg = option.palette.window().color().darker(110);
+    if ((option.state & QStyle::State_MouseOver) != 0) {
+        cardBg = cardBg.lighter(105);
+    }
+    painter->setBrush(cardBg);
+    painter->setPen(Qt::NoPen);
+    painter->drawRoundedRect(option.rect.adjusted(1, 1, -1, -1), cardRadius, cardRadius);
+
+    // Thumbnail area
+    QRect thumbnailRect(option.rect.x() + margin, option.rect.y() + margin, thumbnailSize, thumbnailSize);
+    QColor thumbBg = option.palette.window().color().darker(125);
+    painter->setBrush(thumbBg);
+    painter->setPen(Qt::NoPen);
+    painter->drawRoundedRect(thumbnailRect.adjusted(-4, -4, 4, 4), 8, 8);
+
+    // Draw "+" icon
+    int plusSize = 48;
+    QRect plusRect(0, 0, plusSize, plusSize);
+    plusRect.moveCenter(thumbnailRect.center());
+    QIcon addIcon(QLatin1String(":/icons/list-add.svg"));
+    if (!addIcon.isNull()) {
+        addIcon.paint(painter, plusRect);
+    }
+    else {
+        QFont plusFont = painter->font();
+        plusFont.setPixelSize(36);
+        painter->setFont(plusFont);
+        painter->drawText(plusRect, Qt::AlignCenter, QStringLiteral("+"));
+    }
+
+    // Draw "Open file..." text
+    painter->setPen(option.palette.text().color());
+    QRect textRect(
+        option.rect.x() + margin,
+        thumbnailRect.bottom() + margin,
+        thumbnailSize,
+        painter->fontMetrics().lineSpacing()
+    );
+    painter->setFont(QGuiApplication::font());
+    painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Open file..."));
+
+    painter->restore();
+}
+
 void FileCardDelegate::paint(
     QPainter* painter,
     const QStyleOptionViewItem& option,
     const QModelIndex& index
 ) const
 {
-    painter->save();
-    // Step 1: Styling
-    QStyleOptionButton buttonOption;
-    buttonOption.initFrom(option.widget);
-    buttonOption.rect = option.rect;
-    buttonOption.state = QStyle::State_Enabled;
+    auto path = index.data(static_cast<int>(DisplayedFilesModelRoles::path)).toString();
 
+    // Handle sentinel "Open file..." card
+    if (path == QLatin1String("__open_file_dialog__")) {
+        paintOpenFileCard(painter, option);
+        return;
+    }
+
+    painter->save();
+    // Step 1: Draw card background with rounded corners
+    painter->setRenderHint(QPainter::Antialiasing);
+    QColor cardBg = option.palette.window().color().darker(110);
+    QColor borderColor = option.palette.mid().color();
+    borderColor.setAlphaF(0.3);
     if ((option.state & QStyle::State_MouseOver) != 0) {
-        buttonOption.state |= QStyle::State_MouseOver;
+        cardBg = cardBg.darker(110);
+        borderColor.setAlphaF(0.5);
     }
-    if ((option.state & QStyle::State_Selected) != 0) {
-        buttonOption.state |= QStyle::State_On;
-    }
-    if ((option.state & QStyle::State_Sunken) != 0) {
-        buttonOption.state |= QStyle::State_Sunken;
-    }
-    qApp->style()->drawControl(QStyle::CE_PushButton, &buttonOption, painter, &styleButton);
+    painter->setBrush(cardBg);
+    painter->setPen(QPen(borderColor, 1));
+    painter->drawRoundedRect(option.rect.adjusted(1, 1, -1, -1), cardRadius, cardRadius);
 
     // Step 2: Fetch required data
     auto thumbnailSize = static_cast<int>(_parameterGroup->GetInt("FileThumbnailIconsSize", 128));  // NOLINT
     auto baseName = index.data(static_cast<int>(DisplayedFilesModelRoles::baseName)).toString();
-    auto elidedName = painter->fontMetrics().elidedText(baseName, Qt::ElideRight, thumbnailSize);
     auto size = index.data(static_cast<int>(DisplayedFilesModelRoles::size)).toString();
     auto image = index.data(static_cast<int>(DisplayedFilesModelRoles::image)).toByteArray();
-    auto path = index.data(static_cast<int>(DisplayedFilesModelRoles::path)).toString();
 
     QPixmap pixmap;
     if (!image.isEmpty()) {
@@ -114,14 +172,52 @@ void FileCardDelegate::paint(
         Qt::SmoothTransformation
     );
 
-    // Step 4: Positioning
+    // Step 3: Positioning
     QRect thumbnailRect(option.rect.x() + margin, option.rect.y() + margin, thumbnailSize, thumbnailSize);
+
+    // Draw darker thumbnail background area
+    QColor thumbBg = option.palette.window().color().darker(130);
+    painter->setBrush(thumbBg);
+    painter->setPen(Qt::NoPen);
+    painter->drawRoundedRect(thumbnailRect.adjusted(-4, -4, 4, 4), 8, 8);
+
+    // Determine text start X and available width (may shift for pinned indicator)
+    int textX = option.rect.x() + margin;
+    int textWidth = thumbnailSize;
+    constexpr int pinDotSize = 8;
+    constexpr int pinDotMargin = 6;
+
+    bool isPinned = false;
+    if (_showPinnedIndicator) {
+        isPinned = index.data(static_cast<int>(DisplayedFilesModelRoles::pinned)).toBool();
+    }
+
+    if (isPinned) {
+        textX += pinDotSize + pinDotMargin;
+        textWidth -= pinDotSize + pinDotMargin;
+    }
+
+    auto elidedName = painter->fontMetrics().elidedText(baseName, Qt::ElideRight, textWidth);
+
     QRect textRect(
-        option.rect.x() + margin,
+        textX,
         thumbnailRect.bottom() + margin,
-        thumbnailSize,
+        textWidth,
         painter->fontMetrics().lineSpacing()
     );
+
+    // Build size + timestamp string
+    QString sizeAndTime = size;
+    if (_showTimestamp) {
+        auto modifiedTime = index.data(static_cast<int>(DisplayedFilesModelRoles::modifiedTime)).toString();
+        auto relTime = relativeTimeString(modifiedTime);
+        if (!relTime.isEmpty() && !size.isEmpty()) {
+            sizeAndTime = size + QStringLiteral(" \u00B7 ") + relTime;  // " · "
+        }
+        else if (!relTime.isEmpty()) {
+            sizeAndTime = relTime;
+        }
+    }
 
     QRect sizeRect(
         option.rect.x() + margin,
@@ -130,12 +226,29 @@ void FileCardDelegate::paint(
         painter->fontMetrics().lineSpacing() + margin
     );
 
-    // Step 5: Draw
+    // Step 4: Draw
     QRect pixmapRect(thumbnailRect.topLeft(), scaledPixmap.size());
     pixmapRect.moveCenter(thumbnailRect.center());
     painter->drawPixmap(pixmapRect.topLeft(), scaledPixmap);
+
+    // Draw pinned indicator (blue dot) before filename
+    if (isPinned) {
+        QColor accentColor = option.palette.highlight().color();
+        painter->setBrush(accentColor);
+        painter->setPen(Qt::NoPen);
+        int dotY = textRect.center().y() - pinDotSize / 2;
+        painter->drawEllipse(option.rect.x() + margin, dotY, pinDotSize, pinDotSize);
+        painter->setPen(option.palette.text().color());
+    }
+
     painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedName);
-    painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignTop, size);
+
+    // Draw size/timestamp in slightly lighter color
+    QColor sizeColor = option.palette.text().color();
+    sizeColor.setAlphaF(0.6);
+    painter->setPen(sizeColor);
+    painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignTop, sizeAndTime);
+
     painter->restore();
 }
 
@@ -148,7 +261,7 @@ QSize FileCardDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
     auto thumbnailSize = _parameterGroup->GetInt("FileThumbnailIconsSize", 128);  // NOLINT
 
     QFontMetrics qfm(QGuiApplication::font());
-    int textHeight = textspacing + qfm.lineSpacing() * 2;  // name + size
+    int textHeight = textspacing + qfm.lineSpacing() * 2;  // name + size/timestamp
     int cardWidth = static_cast<int>(thumbnailSize) + 2 * margin;
     int cardHeight = static_cast<int>(thumbnailSize) + textHeight + 3 * margin;
 

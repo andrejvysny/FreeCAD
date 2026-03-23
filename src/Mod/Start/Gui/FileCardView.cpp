@@ -33,6 +33,8 @@ namespace StartGui
 FileCardView::FileCardView(QWidget* parent)
     : QListView(parent)
 {
+    setFrameShape(QFrame::NoFrame);
+    setStyleSheet(QStringLiteral("QListView { border: none; background: transparent; }"));
     QSizePolicy sizePolicy(QSizePolicy::Policy::MinimumExpanding, QSizePolicy::Policy::MinimumExpanding);
     sizePolicy.setHeightForWidth(true);
     setSizePolicy(sizePolicy);

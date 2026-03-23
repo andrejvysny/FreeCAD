@@ -60,4 +60,6 @@ StartExport std::string humanReadableSize(std::uint64_t bytes);
 
 StartExport std::string getLastModifiedAsString(const Base::FileInfo& file);
 
+StartExport QString relativeTimeString(const QString& isoDateString);
+
 }  // namespace Start

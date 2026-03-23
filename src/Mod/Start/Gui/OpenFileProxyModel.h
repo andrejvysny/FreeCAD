@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2025 Alfredo Monclus <alfredomonclus@gmail.com>          *
+ *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -23,40 +23,31 @@
 
 #pragma once
 
-#include <QLabel>
-#include <QString>
-#include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-
-#include <App/Application.h>
+#include <QIdentityProxyModel>
 
 namespace StartGui
 {
 
-struct NewButton
+/// Wraps a source model and appends a virtual "Open file..." row at the end.
+/// When the user selects the last row, callers can detect it via OpenFileSentinel.
+class OpenFileProxyModel: public QIdentityProxyModel
 {
-    QString heading;
-    QString description;
-    QString iconPath;
-};
+    Q_OBJECT
 
-class NewFileButton: public QPushButton
-{
 public:
-    explicit NewFileButton(const NewButton& newButton, bool compact = false);
+    static const QString OpenFileSentinel;
 
-private:
-    bool isCompact;
-    int iconSize;
-    int labelWidth;
-    QHBoxLayout* mainLayout;
-    QVBoxLayout* textLayout;
-    QLabel* headingLabel;
-    QLabel* descriptionLabel;
+    explicit OpenFileProxyModel(QObject* parent = nullptr);
 
-protected:
-    QSize minimumSizeHint() const override;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+
+    Qt::ItemFlags flags(const QModelIndex& index) const override;
+
+    QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+
+    QModelIndex parent(const QModelIndex& index) const override;
 };
 
 }  // namespace StartGui

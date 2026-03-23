@@ -43,6 +43,8 @@ SET(StartGui_SRCS
         DlgStartPreferencesImp.cpp
         DlgStartPreferencesImp.h
         AppStartGui.cpp
+        ExamplesListDelegate.cpp
+        ExamplesListDelegate.h
         FileCardDelegate.cpp
         FileCardDelegate.h
         FileCardView.cpp
@@ -53,10 +55,16 @@ SET(StartGui_SRCS
         FlowLayout.h
         GeneralSettingsWidget.cpp
         GeneralSettingsWidget.h
+        GettingStartedCard.cpp
+        GettingStartedCard.h
+        LearnLinksWidget.cpp
+        LearnLinksWidget.h
         Manipulator.cpp
         Manipulator.h
         NewFileButton.cpp
         NewFileButton.h
+        OpenFileProxyModel.cpp
+        OpenFileProxyModel.h
         PreCompiled.h
         StartView.cpp
         StartView.h

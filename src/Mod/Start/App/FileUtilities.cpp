@@ -104,3 +104,60 @@ std::string Start::getLastModifiedAsString(const Base::FileInfo& file)
         .toString(Qt::ISODate)
         .toStdString();
 }
+
+QString Start::relativeTimeString(const QString& isoDateString)
+{
+    if (isoDateString.isEmpty()) {
+        return {};
+    }
+
+    QDateTime dt = QDateTime::fromString(isoDateString, Qt::ISODate);
+    if (!dt.isValid()) {
+        return {};
+    }
+
+    QDateTime now = QDateTime::currentDateTime();
+    qint64 secs = dt.secsTo(now);
+
+    if (secs < 0) {
+        return QObject::tr("Just now");
+    }
+
+    constexpr qint64 minute = 60;
+    constexpr qint64 hour = 3600;
+    constexpr qint64 day = 86400;
+    constexpr qint64 week = 604800;
+    constexpr qint64 month = 2592000;  // ~30 days
+
+    if (secs < minute) {
+        return QObject::tr("Just now");
+    }
+    if (secs < hour) {
+        auto mins = secs / minute;
+        return QObject::tr("%1 min ago").arg(mins);
+    }
+    if (secs < day) {
+        auto hours = secs / hour;
+        return QObject::tr("%1 hours ago").arg(hours);
+    }
+    if (secs < 2 * day) {
+        return QObject::tr("Yesterday");
+    }
+    if (secs < week) {
+        auto days = secs / day;
+        return QObject::tr("%1 days ago").arg(days);
+    }
+    if (secs < 2 * week) {
+        return QObject::tr("Last week");
+    }
+    if (secs < month) {
+        auto weeks = secs / week;
+        return QObject::tr("%1 weeks ago").arg(weeks);
+    }
+
+    auto months = secs / month;
+    if (months <= 1) {
+        return QObject::tr("Last month");
+    }
+    return QObject::tr("%1 months ago").arg(months);
+}

@@ -2660,6 +2660,51 @@ QWidget#thumbnailWidget[state="pressed"] {
   border: 1px solid @AccentColor;
 }
 
+/* Start page header */
+QLabel#startPageHeader {
+  color: @TextColor;
+}
+
+/* Start page section labels */
+QLabel#startSectionLabel {
+  color: @TextDisabledColor;
+  padding: 4px 0;
+}
+
+/* Getting started info card */
+QFrame#gettingStartedCard {
+  background-color: @PrimaryColor;
+  border-left: 3px solid @AccentColor;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+/* Compact new file pill buttons */
+#CreateNewRow > QPushButton#newFileButton {
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+/* Sidebar examples list */
+QListView#examplesListView {
+  background-color: transparent;
+  border: none;
+}
+
+/* Learn section links */
+QPushButton#learnLink {
+  text-align: left;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: @AccentColor;
+}
+
+QPushButton#learnLink:hover {
+  color: @AccentColor;
+  text-decoration: underline;
+}
+
 /**
  * Special handling for WB Tab Bar
  */

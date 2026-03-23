@@ -24,6 +24,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QSet>
 #include <Base/Parameter.h>
 
 #include "DisplayedFilesModel.h"
@@ -40,11 +41,21 @@ class StartExport RecentFilesModel: public DisplayedFilesModel
 public:
     explicit RecentFilesModel(QObject* parent = nullptr);
 
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+
     void loadRecentFiles();
     void recentFileAdded(const QString& filename);
 
+    bool isPinned(const QString& path) const;
+    void togglePinned(const QString& path);
+
 private:
+    void loadPinnedFiles();
+    void savePinnedFiles();
+
     Base::Reference<ParameterGrp> _parameterGroup;
+    Base::Reference<ParameterGrp> _startParameterGroup;
+    QSet<QString> _pinnedPaths;
 };
 
 }  // namespace Start

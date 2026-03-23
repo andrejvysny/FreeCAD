@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2025 Alfredo Monclus <alfredomonclus@gmail.com>          *
+ *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -23,40 +23,29 @@
 
 #pragma once
 
-#include <QLabel>
-#include <QString>
-#include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-
-#include <App/Application.h>
+#include <QStyledItemDelegate>
 
 namespace StartGui
 {
 
-struct NewButton
-{
-    QString heading;
-    QString description;
-    QString iconPath;
-};
-
-class NewFileButton: public QPushButton
+class ExamplesListDelegate: public QStyledItemDelegate
 {
 public:
-    explicit NewFileButton(const NewButton& newButton, bool compact = false);
+    explicit ExamplesListDelegate(QObject* parent = nullptr);
+
+    void paint(
+        QPainter* painter,
+        const QStyleOptionViewItem& option,
+        const QModelIndex& index
+    ) const override;
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
-    bool isCompact;
-    int iconSize;
-    int labelWidth;
-    QHBoxLayout* mainLayout;
-    QVBoxLayout* textLayout;
-    QLabel* headingLabel;
-    QLabel* descriptionLabel;
-
-protected:
-    QSize minimumSizeHint() const override;
+    static constexpr int thumbnailSize = 32;
+    static constexpr int margin = 6;
+    static constexpr int spacing = 4;
+    static constexpr int rowHeight = 48;
 };
 
 }  // namespace StartGui
