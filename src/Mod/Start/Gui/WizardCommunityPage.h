@@ -46,7 +46,7 @@ public:
     bool isTelemetryEnabled() const;
 
 private:
-    void onEnableClicked();
+    void onToggleClicked(bool enabled);
     void updateButtonStyle();
 
     QLabel* _iconLabel = nullptr;
@@ -56,7 +56,9 @@ private:
     static constexpr int numDataItems = 6;
     std::array<QLabel*, numDataItems> _dataItems {};
 
-    QPushButton* _enableButton = nullptr;
+    QFrame* _toggleFrame = nullptr;
+    QPushButton* _disabledBtn = nullptr;
+    QPushButton* _enabledBtn = nullptr;
     QFrame* _infoBar = nullptr;
     QLabel* _infoBarLabel = nullptr;
     bool _telemetryEnabled = false;

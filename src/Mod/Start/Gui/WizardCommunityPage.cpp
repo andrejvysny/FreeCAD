@@ -28,6 +28,7 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 
 #include "WizardCommunityPage.h"
@@ -100,13 +101,31 @@ WizardCommunityPage::WizardCommunityPage(QWidget* parent)
     gridWrapper->setLayout(grid);
     layout->addWidget(gridWrapper, 0, Qt::AlignHCenter);
 
-    // Enable statistics button (toggle)
-    _enableButton = new QPushButton(this);
-    _enableButton->setCheckable(true);
-    _enableButton->setCursor(Qt::PointingHandCursor);
-    _enableButton->setMinimumWidth(200);
-    connect(_enableButton, &QPushButton::clicked, this, &WizardCommunityPage::onEnableClicked);
-    layout->addWidget(_enableButton, 0, Qt::AlignCenter);
+    // Segmented pill toggle (Disabled | Enabled)
+    _toggleFrame = new QFrame(this);
+    _toggleFrame->setObjectName(QStringLiteral("telemetryToggle"));
+    _toggleFrame->setFixedHeight(40);
+    _toggleFrame->setMinimumWidth(260);
+
+    auto toggleLayout = new QHBoxLayout(_toggleFrame);
+    toggleLayout->setContentsMargins(3, 3, 3, 3);
+    toggleLayout->setSpacing(0);
+
+    _disabledBtn = new QPushButton(this);
+    _disabledBtn->setCursor(Qt::PointingHandCursor);
+    _disabledBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    _enabledBtn = new QPushButton(this);
+    _enabledBtn->setCursor(Qt::PointingHandCursor);
+    _enabledBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    toggleLayout->addWidget(_disabledBtn);
+    toggleLayout->addWidget(_enabledBtn);
+
+    connect(_disabledBtn, &QPushButton::clicked, this, [this]() { onToggleClicked(false); });
+    connect(_enabledBtn, &QPushButton::clicked, this, [this]() { onToggleClicked(true); });
+
+    layout->addWidget(_toggleFrame, 0, Qt::AlignCenter);
 
     layout->addSpacing(4);
 
@@ -128,9 +147,9 @@ WizardCommunityPage::WizardCommunityPage(QWidget* parent)
     retranslateUi();
 }
 
-void WizardCommunityPage::onEnableClicked()
+void WizardCommunityPage::onToggleClicked(bool enabled)
 {
-    _telemetryEnabled = _enableButton->isChecked();
+    _telemetryEnabled = enabled;
     updateButtonStyle();
     retranslateUi();
 
@@ -148,19 +167,48 @@ void WizardCommunityPage::updateButtonStyle()
 {
     bool dark = isWizardDarkMode();
 
+    // Pill container
+    QString frameBorder = dark ? QStringLiteral("#555") : QStringLiteral("#ccc");
+    QString frameBg = dark ? QStringLiteral("#333") : QStringLiteral("#f0f0f0");
+    _toggleFrame->setStyleSheet(
+        QString("QFrame#telemetryToggle {"
+                "  background-color: %1;"
+                "  border: 1px solid %2;"
+                "  border-radius: 17px;"
+                "}")
+            .arg(frameBg, frameBorder));
+
+    // Shared base style for inner buttons
+    QString btnBase = QStringLiteral(
+        "border: none; border-radius: 14px; padding: 4px 16px; font-weight: bold;");
+
+    // Color definitions
+    QString activeDisabledBg = dark ? QStringLiteral("#555") : QStringLiteral("#ddd");
+    QString activeDisabledText = dark ? QStringLiteral("#fff") : QStringLiteral("#333");
+    QString activeEnabledBg = QStringLiteral("#4CAF50");
+    QString activeEnabledText = QStringLiteral("#fff");
+    QString inactiveText = dark ? QStringLiteral("#888") : QStringLiteral("#999");
+    QString inactiveBg = QStringLiteral("transparent");
+    QString hoverBg = dark ? QStringLiteral("rgba(255,255,255,0.05)")
+                           : QStringLiteral("rgba(0,0,0,0.05)");
+
     if (_telemetryEnabled) {
-        _enableButton->setStyleSheet(QStringLiteral(
-            "background-color: #418FDE; color: white; border: none;"
-            "border-radius: 8px; padding: 8px 24px; font-weight: bold;"));
+        _disabledBtn->setStyleSheet(
+            QString("QPushButton { %1 background-color: %2; color: %3; }"
+                    "QPushButton:hover { background-color: %4; }")
+                .arg(btnBase, inactiveBg, inactiveText, hoverBg));
+        _enabledBtn->setStyleSheet(
+            QString("QPushButton { %1 background-color: %2; color: %3; }")
+                .arg(btnBase, activeEnabledBg, activeEnabledText));
     }
     else {
-        QString bg = dark ? QStringLiteral("rgba(65,143,222,0.15)")
-                          : QStringLiteral("rgba(65,143,222,0.08)");
-        QString textColor = QStringLiteral("#418FDE");
-        _enableButton->setStyleSheet(
-            QString("background-color: %1; color: %2; border: 1px solid %2;"
-                    "border-radius: 8px; padding: 8px 24px; font-weight: bold;")
-                .arg(bg, textColor));
+        _disabledBtn->setStyleSheet(
+            QString("QPushButton { %1 background-color: %2; color: %3; }")
+                .arg(btnBase, activeDisabledBg, activeDisabledText));
+        _enabledBtn->setStyleSheet(
+            QString("QPushButton { %1 background-color: %2; color: %3; }"
+                    "QPushButton:hover { background-color: %4; }")
+                .arg(btnBase, inactiveBg, inactiveText, hoverBg));
     }
 }
 
@@ -206,13 +254,8 @@ void WizardCommunityPage::retranslateUi()
         _dataItems[static_cast<size_t>(i)]->setText(html);
     }
 
-    // Button text depends on toggle state
-    if (_telemetryEnabled) {
-        _enableButton->setText(tr("Statistics enabled \u2713"));
-    }
-    else {
-        _enableButton->setText(tr("Enable statistics"));
-    }
+    _disabledBtn->setText(tr("Disabled"));
+    _enabledBtn->setText(tr("Enabled"));
 
     _infoBarLabel->setText(
         QStringLiteral("\u2611 ")
