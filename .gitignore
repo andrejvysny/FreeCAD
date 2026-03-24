@@ -12,6 +12,10 @@
 !/.packit.yaml
 !/.pre-commit-config.yaml
 !/.pylintrc
+!/.claude/
+!/.claude/**
+!/.cluade/
+!/.cluade/**
 !/contrib/.vscode/
 *.clangd
 *.DS_Store
