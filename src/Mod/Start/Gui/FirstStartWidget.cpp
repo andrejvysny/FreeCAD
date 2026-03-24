@@ -63,6 +63,7 @@ FirstStartWidget::FirstStartWidget(QWidget* parent)
 void FirstStartWidget::setupUi()
 {
     setMaximumWidth(750);
+    setMaximumHeight(700);
 
     auto outerLayout = new QVBoxLayout(this);
     outerLayout->setSpacing(12);

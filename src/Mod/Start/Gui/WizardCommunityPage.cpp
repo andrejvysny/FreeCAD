@@ -43,7 +43,7 @@ WizardCommunityPage::WizardCommunityPage(QWidget* parent)
 {
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(12);
+    layout->setSpacing(8);
     layout->setAlignment(Qt::AlignHCenter);
 
     // Sparkle icon
@@ -80,26 +80,25 @@ WizardCommunityPage::WizardCommunityPage(QWidget* parent)
     _descriptionLabel->setWordWrap(true);
     layout->addWidget(_descriptionLabel);
 
-    layout->addSpacing(4);
-
     // 3x2 data grid showing what is/isn't collected
     auto grid = new QGridLayout();
-    grid->setSpacing(8);
-    grid->setContentsMargins(32, 0, 32, 0);
+    grid->setVerticalSpacing(4);
+    grid->setHorizontalSpacing(24);
+    grid->setContentsMargins(0, 0, 0, 0);
 
     for (int i = 0; i < numDataItems; ++i) {
         _dataItems[static_cast<size_t>(i)] = new QLabel(this);
         _dataItems[static_cast<size_t>(i)]->setTextFormat(Qt::RichText);
-        _dataItems[static_cast<size_t>(i)]->setWordWrap(true);
+        _dataItems[static_cast<size_t>(i)]->setWordWrap(false);
 
         int row = i / 2;
         int col = i % 2;
         grid->addWidget(_dataItems[static_cast<size_t>(i)], row, col);
     }
 
-    layout->addLayout(grid);
-
-    layout->addSpacing(4);
+    auto gridWrapper = new QWidget(this);
+    gridWrapper->setLayout(grid);
+    layout->addWidget(gridWrapper, 0, Qt::AlignHCenter);
 
     // Enable statistics button (toggle)
     _enableButton = new QPushButton(this);

@@ -44,8 +44,8 @@ WizardSummaryPage::WizardSummaryPage(QWidget* parent)
 {
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(16);
-    layout->setAlignment(Qt::AlignHCenter);
+    layout->setSpacing(4);
+    layout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
     // Checkmark icon
     _checkmarkLabel = new QLabel(this);
@@ -63,6 +63,7 @@ WizardSummaryPage::WizardSummaryPage(QWidget* parent)
         _checkmarkLabel->setText(QStringLiteral("\u2713"));
     }
     layout->addWidget(_checkmarkLabel, 0, Qt::AlignCenter);
+    layout->addSpacing(4);
 
     // "Ready to design" heading
     _headingLabel = new QLabel(this);
@@ -79,7 +80,6 @@ WizardSummaryPage::WizardSummaryPage(QWidget* parent)
     _descriptionLabel->setAlignment(Qt::AlignCenter);
     _descriptionLabel->setWordWrap(true);
     layout->addWidget(_descriptionLabel);
-
     layout->addSpacing(8);
 
     // 3x2 summary grid
@@ -130,6 +130,8 @@ WizardSummaryPage::WizardSummaryPage(QWidget* parent)
     _telemetryStatusLabel->setWordWrap(true);
     _telemetryStatusLabel->setVisible(false);
     layout->addWidget(_telemetryStatusLabel);
+
+    layout->addStretch();
 
     retranslateUi();
 }
