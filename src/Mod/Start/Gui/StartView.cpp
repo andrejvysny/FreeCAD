@@ -102,7 +102,7 @@ StartView::StartView(QWidget* parent)
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    auto cardSpacing = hGrp->GetInt("FileCardSpacing", 20);  // NOLINT
+    auto cardSpacing = hGrp->GetInt("FileCardSpacing", 16);  // NOLINT
     auto showExamples = hGrp->GetBool("ShowExamples", true);
 
     std::string customFolder(hGrp->GetASCII("CustomFolder", ""));
@@ -233,7 +233,7 @@ StartView::StartView(QWidget* parent)
     _rightPanel = gsl::owner<QWidget*>(new QWidget());
     rightScrollArea->setWidget(_rightPanel);
     auto rightLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_rightPanel));
-    rightLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinAndMaxSize);
+    rightLayout->setSizeConstraint(QLayout::SizeConstraint::SetDefaultConstraint);
     rightLayout->setContentsMargins(kPageMargin, kPageMargin, kPageMargin, kPageMargin);
 
     // EXAMPLES section in sidebar (flat, no card)
@@ -258,7 +258,7 @@ StartView::StartView(QWidget* parent)
         auto examplesDelegate = gsl::owner<ExamplesListDelegate*>(new ExamplesListDelegate(examplesListWidget));
         examplesListWidget->setItemDelegate(examplesDelegate);
         connect(examplesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
-        examplesLayout->addWidget(examplesListWidget);
+        examplesLayout->addWidget(examplesListWidget, 1);
     }
 
     _browseExamplesButton = gsl::owner<QPushButton*>(new QPushButton());
@@ -641,6 +641,9 @@ void StartView::changeEvent(QEvent* event)
     if (event->type() == QEvent::PaletteChange
         || event->type() == QEvent::StyleChange) {
         updateWordmark();
+        if (_recentFilesListWidget && _recentFilesListWidget->viewport()) {
+            _recentFilesListWidget->viewport()->update();
+        }
         if (_rightPanel) {
             _rightPanel->updateGeometry();
         }

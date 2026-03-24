@@ -53,6 +53,7 @@ protected:
 private:
     void paintOpenFileCard(QPainter* painter, const QStyleOptionViewItem& option) const;
 
+    bool isDarkTheme() const;
     QString getCacheKey(const QString& path, int thumbnailSize) const;
     QPixmap loadAndCacheThumbnail(const QString& path, int thumbnailSize) const;
 

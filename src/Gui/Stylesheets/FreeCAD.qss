@@ -2731,11 +2731,12 @@ QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn:hover {
   border-radius: 12px;
   border: 2px solid rgba(128, 128, 128, 0.35);
   padding: 8px 16px;
-  background: transparent;
+  background-color: @TextEditFieldBackgroundColor;
 }
 
 #CreateNewRow > QPushButton#newFileButton:hover {
   border: 2px solid rgba(65, 143, 222, 0.6);
+  background-color: @GeneralBackgroundHoverColor;
 }
 
 /* Sidebar examples list */

@@ -23,7 +23,6 @@
 
 #include "FileCardView.h"
 
-#include <App/Application.h>
 #include "../App/DisplayedFilesModel.h"
 #include <algorithm>
 
@@ -46,12 +45,7 @@ FileCardView::FileCardView(QWidget* parent)
     setUniformItemSizes(true);
     setMouseTracking(true);
 
-    auto hGrp = App::GetApplication().GetParameterGroupByPath(
-        "User parameter:BaseApp/Preferences/Mod/Start"
-    );
-    m_cardSpacing = static_cast<int>(hGrp->GetInt("FileCardSpacing", 16));  // NOLINT
-
-    setSpacing(m_cardSpacing);
+    setSpacing(0);
 }
 
 int FileCardView::heightForWidth(int width) const
@@ -63,13 +57,12 @@ int FileCardView::heightForWidth(int width) const
     }
     int numCards = model->rowCount();
     auto cardSize = delegate->sizeHint(QStyleOptionViewItem(), model->index(0, 0));
-    int cardsPerRow = std::max(1, static_cast<int>(width / (cardSize.width() + m_cardSpacing)));
+    int cardsPerRow = std::max(1, static_cast<int>(width / cardSize.width()));
     int numRows = static_cast<int>(
         ceil(static_cast<double>(numCards) / static_cast<double>(cardsPerRow))
     );
-    int neededHeight = numRows * cardSize.height();
     constexpr int extra = 4;  // avoid tiny scrollbars
-    return neededHeight + m_cardSpacing * (numRows - 1) + 2 * m_cardSpacing + extra;
+    return numRows * cardSize.height() + extra;
 }
 
 QSize FileCardView::sizeHint() const
@@ -77,14 +70,13 @@ QSize FileCardView::sizeHint() const
     auto model = this->model();
     auto delegate = this->itemDelegate();
     if (!model || !delegate) {
-        // The model and/or delegate have not been set yet, this was an early startup call
-        return {m_cardSpacing, m_cardSpacing};
+        return {16, 16};
     }
     int numCards = model->rowCount();
     auto cardSize = delegate->sizeHint(QStyleOptionViewItem(), model->index(0, 0));
     return {
-        (cardSize.width() + m_cardSpacing) * numCards + m_cardSpacing,
-        cardSize.height() + 2 * m_cardSpacing
+        cardSize.width() * numCards,
+        cardSize.height()
     };
 }
 
