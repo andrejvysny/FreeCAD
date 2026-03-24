@@ -204,6 +204,17 @@ public:
 
     void updateActions(bool delay = false);
 
+    /** @name Full-window overlay
+     *  Shows a semi-transparent overlay covering the entire main window client area
+     *  (toolbars, status bar, central widget, dock widgets). The content widget is
+     *  centered inside a scrollable area.
+     */
+    //@{
+    void showFullWindowOverlay(QWidget* content);
+    void hideFullWindowOverlay();
+    bool isFullWindowOverlayVisible() const;
+    //@}
+
     enum StatusType
     {
         None,
@@ -390,6 +401,7 @@ Q_SIGNALS:
     void workbenchActivated(const QString&);
     void mainWindowClosed();
     void recentFileAdded(const QString& filename);
+    void fullWindowOverlayHidden();
 
 private:
     /// some kind of singleton

@@ -66,6 +66,7 @@ class StartGuiExport StartView: public Gui::MDIView
 
 public:
     StartView(QWidget* parent);
+    ~StartView() override;
 
     const char* getName() const override
     {
@@ -169,6 +170,8 @@ private:
 
     // First Start wizard
     FirstStartWidget* _firstStartWidget = nullptr;
+    bool _firstStartShown = false;
+    void showWizardOverlay();
 
     // Footer
     QPushButton* _openFirstStart = nullptr;

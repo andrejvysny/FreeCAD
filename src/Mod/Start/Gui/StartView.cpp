@@ -108,25 +108,9 @@ StartView::StartView(QWidget* parent)
     std::string customFolder(hGrp->GetASCII("CustomFolder", ""));
     bool showCustomFolder = !customFolder.empty();
 
-    // =========================================================================
-    // First Start wizard (overlay background)
-    // =========================================================================
-    auto firstStartScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
-    firstStartScrollArea->setObjectName(QStringLiteral("wizardOverlayScrollArea"));
-    firstStartScrollArea->setFrameShape(QFrame::NoFrame);
-    firstStartScrollArea->setWidgetResizable(true);
-    firstStartScrollArea->setStyleSheet(QStringLiteral("background: rgba(0,0,0,0.3); border: none;"));
-
-    auto firstStartScrollWidget = gsl::owner<QWidget*>(new QWidget(firstStartScrollArea));
-    firstStartScrollArea->setWidget(firstStartScrollWidget);
-
-    auto firstStartRegion = gsl::owner<QVBoxLayout*>(new QVBoxLayout(firstStartScrollWidget));
-    firstStartRegion->setContentsMargins(32, 32, 32, 32);
-    firstStartRegion->setAlignment(Qt::AlignCenter);
-    _firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(this));
+    // First Start wizard — created without parent, shown via MainWindow overlay
+    _firstStartWidget = new FirstStartWidget(nullptr);
     connect(_firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
-    firstStartRegion->addWidget(_firstStartWidget);
-    _contents->addWidget(firstStartScrollArea);
 
     // =========================================================================
     // Documents page — two-column layout (full height sidebar)
@@ -331,9 +315,6 @@ StartView::StartView(QWidget* parent)
     // =========================================================================
     // Configure models and page selection
     // =========================================================================
-    auto firstStart = hGrp->GetBool("FirstStart2025", true);
-    _contents->setCurrentWidget(firstStart ? firstStartScrollArea : documentsWidget);
-
     // Set up proxy model for recent files (appends "Open file..." card)
     _openFileProxyModel.setSourceModel(&_recentFilesModel);
     configureRecentFilesListWidget(_recentFilesListWidget, _recentFilesLabel);
@@ -356,6 +337,16 @@ StartView::StartView(QWidget* parent)
 
     isInitialized = true;
     retranslateUi();
+}
+
+StartView::~StartView()
+{
+    if (auto mainWindow = Gui::getMainWindow()) {
+        if (mainWindow->isFullWindowOverlayVisible()) {
+            mainWindow->hideFullWindowOverlay();
+        }
+    }
+    delete _firstStartWidget;
 }
 
 void StartView::configureNewFileButtons(QLayout* layout, bool compact) const
@@ -596,10 +587,7 @@ void StartView::showOnStartupChanged(bool checked)
 
 void StartView::openFirstStartClicked()
 {
-    if (_firstStartWidget) {
-        _firstStartWidget->resetToFirstStep();
-    }
-    _contents->setCurrentIndex(0);
+    showWizardOverlay();
 }
 
 void StartView::firstStartWidgetDismissed()
@@ -608,7 +596,25 @@ void StartView::firstStartWidgetDismissed()
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
     hGrp->SetBool("FirstStart2025", false);
-    _contents->setCurrentIndex(1);
+    if (auto mainWindow = Gui::getMainWindow()) {
+        disconnect(mainWindow, &Gui::MainWindow::fullWindowOverlayHidden,
+                   this, &StartView::firstStartWidgetDismissed);
+        mainWindow->hideFullWindowOverlay();
+    }
+}
+
+void StartView::showWizardOverlay()
+{
+    if (auto mainWindow = Gui::getMainWindow()) {
+        if (_firstStartWidget) {
+            _firstStartWidget->resetToFirstStep();
+            mainWindow->showFullWindowOverlay(_firstStartWidget);
+            // Dismiss wizard if overlay is hidden externally (e.g. Escape key)
+            connect(mainWindow, &Gui::MainWindow::fullWindowOverlayHidden,
+                    this, &StartView::firstStartWidgetDismissed,
+                    Qt::UniqueConnection);
+        }
+    }
 }
 
 void StartView::changeEvent(QEvent* event)
@@ -659,6 +665,18 @@ void StartView::showEvent(QShowEvent* event)
             );
         }
     }
+
+    // Show wizard overlay on first run (deferred so MainWindow geometry is ready)
+    if (!_firstStartShown) {
+        auto hGrp = App::GetApplication().GetParameterGroupByPath(
+            "User parameter:BaseApp/Preferences/Mod/Start"
+        );
+        if (hGrp->GetBool("FirstStart2025", true)) {
+            _firstStartShown = true;
+            QTimer::singleShot(0, this, &StartView::showWizardOverlay);
+        }
+    }
+
     updateWordmark();  // re-check wordmark after stylesheet is applied
     Gui::MDIView::showEvent(event);
 }
