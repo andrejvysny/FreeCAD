@@ -33,6 +33,7 @@ namespace StartGui
 FileCardView::FileCardView(QWidget* parent)
     : QListView(parent)
 {
+    setFrameShape(QFrame::NoFrame);
     QSizePolicy sizePolicy(QSizePolicy::Policy::MinimumExpanding, QSizePolicy::Policy::MinimumExpanding);
     sizePolicy.setHeightForWidth(true);
     setSizePolicy(sizePolicy);

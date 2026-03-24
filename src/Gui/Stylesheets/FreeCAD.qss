@@ -2646,6 +2646,55 @@ QMdiSubWindow:active {
 /*==================================================================================================
 Start page
 ==================================================================================================*/
+/* Start page scroll areas — remove MDI border */
+QScrollArea#startLeftScrollArea,
+QScrollArea#startRightScrollArea {
+  border: none;
+  background-color: transparent;
+}
+
+/* Section labels */
+QLabel#startSectionLabel {
+  color: @TextForegroundColor;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 4px 0;
+}
+
+/* Sidebar divider */
+QFrame#startSidebarDivider {
+  background-color: @GeneralBorderColor;
+  border: none;
+  min-width: 1px;
+  max-width: 1px;
+}
+
+/* Version label */
+QLabel#startVersionLabel {
+  color: @TextDisabledColor;
+  font-size: 11px;
+}
+
+/* Sidebar examples list */
+QListView#examplesListView {
+  background-color: transparent;
+  border: none;
+}
+
+/* Learn links */
+QPushButton#learnLink {
+  text-align: left;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: @AccentColor;
+}
+
+QPushButton#learnLink:hover {
+  color: @AccentColor;
+  text-decoration: underline;
+}
+
 QWidget#thumbnailWidget {
   background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 @ButtonTopBackgroundColor,stop:1 @ButtonBottomBackgroundColor);
   border-radius: 8px;

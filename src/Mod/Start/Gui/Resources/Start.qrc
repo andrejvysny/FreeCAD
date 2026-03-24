@@ -6,5 +6,9 @@
         <file>thumbnails/Theme_thumbnail_classic.png</file>
         <file>thumbnails/Theme_thumbnail_light.png</file>
         <file>thumbnails/Theme_thumbnail_dark.png</file>
+        <file>branding/FreeCAD-wordmark.svg</file>
+        <file>branding/FreeCAD-wordmark-light.svg</file>
+        <file>branding/FreeCAD-wordmark-mono.svg</file>
+        <file>branding/FreeCAD-wordmark-mono-light.svg</file>
     </qresource>
 </RCC>
