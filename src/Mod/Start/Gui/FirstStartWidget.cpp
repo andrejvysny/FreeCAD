@@ -35,6 +35,7 @@
 #include "WizardFooter.h"
 #include "WizardBasicsPage.h"
 #include "WizardWorkflowPage.h"
+#include "WizardCommunityPage.h"
 #include "WizardSummaryPage.h"
 
 #include <App/Application.h>
@@ -93,6 +94,9 @@ void FirstStartWidget::setupUi()
     _workflowPage = new WizardWorkflowPage(this);
     _stepsWidget->addWidget(_workflowPage);
 
+    _communityPage = new WizardCommunityPage(this);
+    _stepsWidget->addWidget(_communityPage);
+
     _summaryPage = new WizardSummaryPage(this);
     _stepsWidget->addWidget(_summaryPage);
 
@@ -102,7 +106,14 @@ void FirstStartWidget::setupUi()
     _footer = new WizardFooter(totalSteps, this);
     outerLayout->addWidget(_footer);
 
-    connect(_footer, &WizardFooter::skipClicked, this, &FirstStartWidget::dismissed);
+    connect(_footer, &WizardFooter::skipClicked, this, [this]() {
+        if (_currentStep == StepCommunity) {
+            goToStep(_currentStep + 1);
+        }
+        else {
+            Q_EMIT dismissed();
+        }
+    });
     connect(_footer, &WizardFooter::backClicked, this, [this]() {
         if (_currentStep > 0) {
             goToStep(_currentStep - 1);
@@ -160,6 +171,11 @@ void FirstStartWidget::applyThemeColors()
         card->updateStyle();
     }
 
+    // Update community page
+    if (_communityPage) {
+        _communityPage->applyThemeColors();
+    }
+
     // Update summary cells
     if (_summaryPage) {
         _summaryPage->applyThemeColors();
@@ -201,7 +217,15 @@ void FirstStartWidget::goToStep(int step)
     _footer->setStep(step);
     updateHeader();
 
-    if (step == totalSteps - 1 && _summaryPage) {
+    // Contextual skip button text
+    if (step == StepCommunity) {
+        _footer->setSkipText(tr("Skip this step"));
+    }
+    else {
+        _footer->setSkipText(tr("Skip setup"));
+    }
+
+    if (step == StepSummary && _summaryPage) {
         _summaryPage->refreshSummary();
     }
 }
@@ -216,20 +240,26 @@ void FirstStartWidget::updateHeader()
     QString application = QString::fromStdString(App::Application::getExecutableName());
 
     switch (_currentStep) {
-        case 0:
+        case StepBasics:
             _titleLabel->setText(tr("Welcome to %1").arg(application));
             _subtitleLabel->setText(
                 tr("Set your preferences below.") + QLatin1String(" ")
                 + tr("You can change everything later in Edit > Preferences.")
             );
             break;
-        case 1:
+        case StepWorkflow:
             _titleLabel->setText(tr("Your workflow"));
             _subtitleLabel->setText(
                 tr("Help us tailor %1 to your experience level.").arg(application)
             );
             break;
-        case 2:
+        case StepCommunity:
+            _titleLabel->setText(tr("Community"));
+            _subtitleLabel->setText(
+                tr("FreeCAD is built by volunteers. Here's one way you can contribute.")
+            );
+            break;
+        case StepSummary:
             _titleLabel->setText(tr("You're all set"));
             _subtitleLabel->setText(
                 tr("Here's a summary.") + QLatin1String(" ")
@@ -256,6 +286,9 @@ void FirstStartWidget::retranslateUi()
     }
     if (_workflowPage) {
         _workflowPage->retranslateUi();
+    }
+    if (_communityPage) {
+        _communityPage->retranslateUi();
     }
     if (_summaryPage) {
         _summaryPage->retranslateUi();

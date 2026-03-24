@@ -39,10 +39,11 @@ class StepIndicatorWidget;
 class WizardFooter;
 class WizardBasicsPage;
 class WizardWorkflowPage;
+class WizardCommunityPage;
 class WizardSummaryPage;
 
-/// 3-step interactive setup wizard shown on first launch.
-/// Contains WizardBasicsPage, WizardWorkflowPage, and WizardSummaryPage.
+/// 4-step interactive setup wizard shown on first launch.
+/// Contains WizardBasicsPage, WizardWorkflowPage, WizardCommunityPage, and WizardSummaryPage.
 class FirstStartWidget: public QWidget
 {
     Q_OBJECT
@@ -68,7 +69,11 @@ private:
     void goToStep(int step);
     void updateHeader();
 
-    static constexpr int totalSteps = 3;
+    static constexpr int totalSteps = 4;
+    static constexpr int StepBasics = 0;
+    static constexpr int StepWorkflow = 1;
+    static constexpr int StepCommunity = 2;
+    static constexpr int StepSummary = 3;
     int _currentStep = 0;
 
     // Header
@@ -80,6 +85,7 @@ private:
     QStackedWidget* _stepsWidget = nullptr;
     WizardBasicsPage* _basicsPage = nullptr;
     WizardWorkflowPage* _workflowPage = nullptr;
+    WizardCommunityPage* _communityPage = nullptr;
     WizardSummaryPage* _summaryPage = nullptr;
 
     // Footer

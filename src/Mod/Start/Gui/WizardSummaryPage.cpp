@@ -123,6 +123,14 @@ WizardSummaryPage::WizardSummaryPage(QWidget* parent)
 
     layout->addLayout(grid);
 
+    // Telemetry status (hidden by default, shown if user opted in)
+    _telemetryStatusLabel = new QLabel(this);
+    _telemetryStatusLabel->setObjectName(QStringLiteral("telemetryStatus"));
+    _telemetryStatusLabel->setAlignment(Qt::AlignCenter);
+    _telemetryStatusLabel->setWordWrap(true);
+    _telemetryStatusLabel->setVisible(false);
+    layout->addWidget(_telemetryStatusLabel);
+
     retranslateUi();
 }
 
@@ -183,6 +191,20 @@ void WizardSummaryPage::refreshSummary()
     // Layout
     auto layoutProfile = QString::fromStdString(hGrpStart->GetASCII("LayoutProfile", "Modern"));
     _valueLabels[5]->setText(layoutProfile);
+
+    // Telemetry status
+    bool telemetryOn = hGrpStart->GetBool("TelemetryOptIn", false);
+    if (telemetryOn) {
+        _telemetryStatusLabel->setText(
+            QStringLiteral("\u2713 ")
+            + tr("Usage statistics enabled \u2014 thank you for contributing."));
+        _telemetryStatusLabel->setStyleSheet(
+            QStringLiteral("color: #4CAF50; border: none;"));
+        _telemetryStatusLabel->setVisible(true);
+    }
+    else {
+        _telemetryStatusLabel->setVisible(false);
+    }
 }
 
 void WizardSummaryPage::retranslateUi()

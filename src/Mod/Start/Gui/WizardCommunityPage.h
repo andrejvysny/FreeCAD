@@ -24,37 +24,42 @@
 #pragma once
 
 #include <QWidget>
+#include <array>
 
+class QFrame;
+class QLabel;
 class QPushButton;
 
 namespace StartGui
 {
 
-/// Footer bar for the setup wizard with Skip/Back/Next navigation.
-/// Emits signals for each button. Updates button visibility and text per step.
-class WizardFooter: public QWidget
+/// Step 3 of the setup wizard: Community telemetry opt-in page.
+/// Allows the user to enable anonymous usage statistics (installed as addon).
+class WizardCommunityPage: public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit WizardFooter(int totalSteps, QWidget* parent = nullptr);
-
-    void setStep(int step);
-    void setSkipText(const QString& text);
+    explicit WizardCommunityPage(QWidget* parent = nullptr);
     void retranslateUi();
     void applyThemeColors();
-
-Q_SIGNALS:
-    void skipClicked();
-    void backClicked();
-    void nextClicked();
+    bool isTelemetryEnabled() const;
 
 private:
-    int _totalSteps;
-    int _currentStep = 0;
-    QPushButton* _skipButton = nullptr;
-    QPushButton* _backButton = nullptr;
-    QPushButton* _nextButton = nullptr;
+    void onEnableClicked();
+    void updateButtonStyle();
+
+    QLabel* _iconLabel = nullptr;
+    QLabel* _headingLabel = nullptr;
+    QLabel* _descriptionLabel = nullptr;
+
+    static constexpr int numDataItems = 6;
+    std::array<QLabel*, numDataItems> _dataItems {};
+
+    QPushButton* _enableButton = nullptr;
+    QFrame* _infoBar = nullptr;
+    QLabel* _infoBarLabel = nullptr;
+    bool _telemetryEnabled = false;
 };
 
 }  // namespace StartGui

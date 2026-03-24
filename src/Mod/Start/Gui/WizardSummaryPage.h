@@ -52,6 +52,8 @@ private:
     static constexpr int numCells = 6;
     std::array<QLabel*, numCells> _categoryLabels {};
     std::array<QLabel*, numCells> _valueLabels {};
+
+    QLabel* _telemetryStatusLabel = nullptr;
 };
 
 }  // namespace StartGui

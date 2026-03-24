@@ -77,6 +77,11 @@ void WizardFooter::setStep(int step)
     }
 }
 
+void WizardFooter::setSkipText(const QString& text)
+{
+    _skipButton->setText(text);
+}
+
 void WizardFooter::retranslateUi()
 {
     _skipButton->setText(tr("Skip setup"));

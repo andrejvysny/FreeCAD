@@ -82,6 +82,8 @@ SET(StartGui_SRCS
         WizardFooter.h
         WizardWorkflowPage.cpp
         WizardWorkflowPage.h
+        WizardCommunityPage.cpp
+        WizardCommunityPage.h
         WizardSummaryPage.cpp
         WizardSummaryPage.h
         )
