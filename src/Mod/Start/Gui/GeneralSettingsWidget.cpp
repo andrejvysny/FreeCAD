@@ -74,14 +74,21 @@ void GeneralSettingsWidget::setupUi()
 
 void GeneralSettingsWidget::createHorizontalUi()
 {
-    auto mainLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout(this));
-    const int extraSpace {36};
-    mainLayout->addWidget(_languageLabel);
-    mainLayout->addWidget(_languageComboBox);
-    mainLayout->addSpacing(extraSpace);
-    mainLayout->addWidget(_unitSystemLabel);
-    mainLayout->addWidget(_unitSystemComboBox);
-    mainLayout->addSpacing(extraSpace);
+    auto mainLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
+
+    // Row 1: Language + Unit System side by side (labels above combos)
+    auto row1 = gsl::owner<QHBoxLayout*>(new QHBoxLayout);
+    auto langCol = gsl::owner<QVBoxLayout*>(new QVBoxLayout);
+    langCol->addWidget(_languageLabel);
+    langCol->addWidget(_languageComboBox);
+    auto unitCol = gsl::owner<QVBoxLayout*>(new QVBoxLayout);
+    unitCol->addWidget(_unitSystemLabel);
+    unitCol->addWidget(_unitSystemComboBox);
+    row1->addLayout(langCol);
+    row1->addLayout(unitCol);
+    mainLayout->addLayout(row1);
+
+    // Row 2: Navigation Style alone (label above combo)
     mainLayout->addWidget(_navigationStyleLabel);
     mainLayout->addWidget(_navigationStyleComboBox);
 }
