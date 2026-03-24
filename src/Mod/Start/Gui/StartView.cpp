@@ -294,7 +294,13 @@ StartView::StartView(QWidget* parent)
     _leftContentLayout->addLayout(footerLayout);
 
     _openFirstStart = gsl::owner<QPushButton*>(new QPushButton());
-    _openFirstStart->setIcon(QIcon(QLatin1String(":/icons/preferences-general.svg")));
+    _openFirstStart->setCursor(Qt::PointingHandCursor);
+    _openFirstStart->setFlat(true);
+    _openFirstStart->setStyleSheet(QStringLiteral(
+        "QPushButton { background: transparent; border: 1px solid rgba(128,128,128,0.35);"
+        "border-radius: 6px; padding: 4px 12px; color: rgba(0,0,0,0.55); font-size: 11px; }"
+        "QPushButton:hover { border-color: rgba(65,143,222,0.6); color: #418FDE; }"
+    ));
     connect(_openFirstStart, &QPushButton::clicked, this, &StartView::openFirstStartClicked);
 
     _showOnStartupCheckBox = gsl::owner<QCheckBox*>(new QCheckBox());
@@ -851,6 +857,6 @@ void StartView::retranslateUi()
         _browseExamplesButton->setText(tr("Browse all examples..."));
     }
 
-    _openFirstStart->setText(tr("Open First Start Setup"));
+    _openFirstStart->setText(tr("Setup Wizard"));
     _showOnStartupCheckBox->setText(tr("Do not show this Start page again"));
 }
