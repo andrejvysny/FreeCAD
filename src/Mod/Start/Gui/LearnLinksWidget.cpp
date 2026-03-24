@@ -21,6 +21,7 @@
  *                                                                          *
  ***************************************************************************/
 
+#include <QCursor>
 #include <QDesktopServices>
 #include <QPushButton>
 #include <QUrl>
@@ -40,6 +41,7 @@ QPushButton* makeLearnLink(const QString& text, const QString& iconPath, const Q
     auto* button = new QPushButton(QIcon(iconPath), text);
     button->setObjectName(QStringLiteral("learnLink"));
     button->setFlat(true);
+    button->setCursor(Qt::PointingHandCursor);
     button->setStyleSheet(QStringLiteral("text-align: left;"));
     QObject::connect(button, &QPushButton::clicked, [url]() {
         QDesktopServices::openUrl(QUrl(url));
@@ -93,5 +95,15 @@ LearnLinksWidget::LearnLinksWidget(QWidget* parent)
         tr("What's new in %1").arg(whatsNewLabel()),
         QStringLiteral(":/icons/internet-web-browser.svg"),
         releaseNotesUrl()
+    ));
+    layout->addWidget(makeLearnLink(
+        tr("Forum"),
+        QStringLiteral(":/icons/internet-web-browser.svg"),
+        QStringLiteral("https://forum.freecad.org")
+    ));
+    layout->addWidget(makeLearnLink(
+        tr("Community"),
+        QStringLiteral(":/icons/internet-web-browser.svg"),
+        QStringLiteral("https://freecad.org/community")
     ));
 }

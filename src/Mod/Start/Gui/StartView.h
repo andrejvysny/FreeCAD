@@ -35,6 +35,7 @@
 
 class QCheckBox;
 class QEvent;
+class QFrame;
 class QGridLayout;
 class QHBoxLayout;
 class QLabel;
@@ -115,6 +116,8 @@ private:
     void retranslateUi();
     void setListViewUpdatesEnabled(bool enabled);
     void updateLayout();
+    void updateContentCentering();
+    void updateWordmark();
 
     QStackedWidget* _contents = nullptr;
     Start::RecentFilesModel _recentFilesModel;
@@ -124,6 +127,8 @@ private:
 
     // Header
     QLabel* _headerLabel = nullptr;
+    QLabel* _wordmarkLabel = nullptr;
+    QLabel* _headerTaglineLabel = nullptr;
 
     // Section labels
     QLabel* _recentFilesLabel = nullptr;
@@ -134,18 +139,29 @@ private:
 
     // Layout references for responsive reparenting
     QVBoxLayout* _leftContentLayout = nullptr;
+    QWidget* _leftContentWidget = nullptr;
+    QScrollArea* _leftScrollArea = nullptr;
     QWidget* _rightPanel = nullptr;
     QScrollArea* _rightScrollArea = nullptr;
     QHBoxLayout* _bodyLayout = nullptr;
+    QFrame* _sidebarDivider = nullptr;
     bool _isTwoColumn = true;
     static constexpr int responsiveBreakpoint = 800;
+    static constexpr int defaultMaxContentWidth = 1600;
+    static constexpr int defaultMaxContentHeight = 800;
+    int _maxContentWidth = defaultMaxContentWidth;
+    int _maxContentHeight = defaultMaxContentHeight;
 
     // Recent files list (stored for context menu)
     QListView* _recentFilesListWidget = nullptr;
 
     // Sidebar widgets (stored for reparenting)
-    QWidget* _examplesContainer = nullptr;
-    QWidget* _learnContainer = nullptr;
+    QFrame* _examplesContainer = nullptr;
+    QFrame* _learnContainer = nullptr;
+
+    // Getting Started card
+    QLabel* _gettingStartedLabel = nullptr;
+    GettingStartedCard* _gettingStartedCard = nullptr;
 
     // Browse examples button
     QPushButton* _browseExamplesButton = nullptr;

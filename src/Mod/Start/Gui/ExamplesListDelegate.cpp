@@ -113,11 +113,14 @@ void ExamplesListDelegate::paint(
     QString elidedName = fm.elidedText(baseName, Qt::ElideRight, textWidth);
     painter->drawText(nameRect, Qt::AlignLeft | Qt::AlignVCenter, elidedName);
 
-    // Step 6: Draw file size in lighter color
+    // Step 6: Draw file size in lighter, smaller font
     auto fileSize = index.data(static_cast<int>(Start::DisplayedFilesModelRoles::size)).toString();
     QColor lightColor = option.palette.color(QPalette::Text);
-    lightColor.setAlphaF(0.55);
+    lightColor.setAlphaF(0.25);
     painter->setPen(lightColor);
+    QFont smallFont = painter->font();
+    smallFont.setPointSizeF(smallFont.pointSizeF() * 0.85);
+    painter->setFont(smallFont);
     painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignVCenter, fileSize);
 
     painter->restore();

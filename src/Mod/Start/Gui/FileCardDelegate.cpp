@@ -79,39 +79,37 @@ void FileCardDelegate::paintOpenFileCard(
 
     auto thumbnailSize = static_cast<int>(_parameterGroup->GetInt("FileThumbnailIconsSize", 128));
 
-    // Card background
-    QColor cardBg = option.palette.window().color().darker(110);
+    // Dashed ghost card border (same color as file cards)
+    QColor dashedColor = option.palette.mid().color();
+    dashedColor.setAlphaF(0.3);
     if ((option.state & QStyle::State_MouseOver) != 0) {
-        cardBg = cardBg.lighter(105);
+        dashedColor = QColor(0x41, 0x8F, 0xDE);  // Tufts Blue on hover
+        dashedColor.setAlphaF(0.6);
     }
-    painter->setBrush(cardBg);
-    painter->setPen(Qt::NoPen);
-    painter->drawRoundedRect(option.rect.adjusted(1, 1, -1, -1), cardRadius, cardRadius);
+    QPen dashedPen(dashedColor);
+    dashedPen.setStyle(Qt::DashLine);
+    dashedPen.setWidth(2);
+    painter->setBrush(Qt::NoBrush);
+    painter->setPen(dashedPen);
+    painter->drawRoundedRect(option.rect.adjusted(3, 3, -3, -3), cardRadius, cardRadius);
 
-    // Thumbnail area
+    // Draw "+" icon in Tufts Blue
     QRect thumbnailRect(option.rect.x() + margin, option.rect.y() + margin, thumbnailSize, thumbnailSize);
-    QColor thumbBg = option.palette.window().color().darker(125);
-    painter->setBrush(thumbBg);
-    painter->setPen(Qt::NoPen);
-    painter->drawRoundedRect(thumbnailRect.adjusted(-4, -4, 4, 4), 8, 8);
-
-    // Draw "+" icon
     int plusSize = 48;
     QRect plusRect(0, 0, plusSize, plusSize);
     plusRect.moveCenter(thumbnailRect.center());
-    QIcon addIcon(QLatin1String(":/icons/list-add.svg"));
-    if (!addIcon.isNull()) {
-        addIcon.paint(painter, plusRect);
-    }
-    else {
-        QFont plusFont = painter->font();
-        plusFont.setPixelSize(36);
-        painter->setFont(plusFont);
-        painter->drawText(plusRect, Qt::AlignCenter, QStringLiteral("+"));
-    }
 
-    // Draw "Open file..." text
-    painter->setPen(option.palette.text().color());
+    QFont plusFont = painter->font();
+    plusFont.setPixelSize(36);
+    plusFont.setWeight(QFont::Light);
+    painter->setFont(plusFont);
+    painter->setPen(QColor(0x41, 0x8F, 0xDE));  // Tufts Blue
+    painter->drawText(plusRect, Qt::AlignCenter, QStringLiteral("+"));
+
+    // Draw "Open file..." text in secondary color
+    QColor textColor = option.palette.text().color();
+    textColor.setAlphaF(0.6);
+    painter->setPen(textColor);
     QRect textRect(
         option.rect.x() + margin,
         thumbnailRect.bottom() + margin,
@@ -141,16 +139,17 @@ void FileCardDelegate::paint(
     painter->save();
     // Step 1: Draw card background with rounded corners
     painter->setRenderHint(QPainter::Antialiasing);
-    QColor cardBg = option.palette.window().color().darker(110);
+    QColor cardBg = option.palette.window().color().darker(108);
     QColor borderColor = option.palette.mid().color();
     borderColor.setAlphaF(0.3);
     if ((option.state & QStyle::State_MouseOver) != 0) {
-        cardBg = cardBg.darker(110);
-        borderColor.setAlphaF(0.5);
+        cardBg = cardBg.lighter(115);
+        borderColor = QColor(0x41, 0x8F, 0xDE);  // Tufts Blue on hover
+        borderColor.setAlphaF(0.6);
     }
     painter->setBrush(cardBg);
-    painter->setPen(QPen(borderColor, 1));
-    painter->drawRoundedRect(option.rect.adjusted(1, 1, -1, -1), cardRadius, cardRadius);
+    painter->setPen(QPen(borderColor, 2));
+    painter->drawRoundedRect(option.rect.adjusted(3, 3, -3, -3), cardRadius, cardRadius);
 
     // Step 2: Fetch required data
     auto thumbnailSize = static_cast<int>(_parameterGroup->GetInt("FileThumbnailIconsSize", 128));  // NOLINT
@@ -176,7 +175,7 @@ void FileCardDelegate::paint(
     QRect thumbnailRect(option.rect.x() + margin, option.rect.y() + margin, thumbnailSize, thumbnailSize);
 
     // Draw darker thumbnail background area
-    QColor thumbBg = option.palette.window().color().darker(130);
+    QColor thumbBg = option.palette.window().color().darker(112);
     painter->setBrush(thumbBg);
     painter->setPen(Qt::NoPen);
     painter->drawRoundedRect(thumbnailRect.adjusted(-4, -4, 4, 4), 8, 8);
@@ -219,10 +218,11 @@ void FileCardDelegate::paint(
         }
     }
 
+    int textAvailableWidth = option.rect.width() - 2 * margin;
     QRect sizeRect(
         option.rect.x() + margin,
         textRect.bottom() + textspacing,
-        thumbnailSize,
+        textAvailableWidth,
         painter->fontMetrics().lineSpacing() + margin
     );
 
@@ -243,11 +243,13 @@ void FileCardDelegate::paint(
 
     painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedName);
 
-    // Draw size/timestamp in slightly lighter color
+    // Draw size/timestamp in slightly lighter color (with proper eliding)
     QColor sizeColor = option.palette.text().color();
     sizeColor.setAlphaF(0.6);
     painter->setPen(sizeColor);
-    painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignTop, sizeAndTime);
+    auto elidedSizeAndTime = painter->fontMetrics().elidedText(
+        sizeAndTime, Qt::ElideRight, textAvailableWidth);
+    painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignTop, elidedSizeAndTime);
 
     painter->restore();
 }

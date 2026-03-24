@@ -21,9 +21,9 @@
  *                                                                          *
  ***************************************************************************/
 
-#include <QFont>
+#include <QHBoxLayout>
 #include <QLabel>
-#include <QVBoxLayout>
+#include <QPushButton>
 
 #include "GettingStartedCard.h"
 
@@ -31,18 +31,12 @@ using namespace StartGui;
 
 GettingStartedCard::GettingStartedCard(QWidget* parent)
     : QFrame(parent)
-    , _titleLabel(new QLabel(this))
     , _bodyLabel(new QLabel(this))
+    , _closeButton(new QPushButton(this))
 {
     setObjectName(QStringLiteral("gettingStartedCard"));
 
-    auto* layout = new QVBoxLayout(this);
-
-    _titleLabel->setObjectName(QStringLiteral("startSectionLabel"));
-    QFont titleFont = _titleLabel->font();
-    titleFont.setBold(true);
-    _titleLabel->setFont(titleFont);
-    _titleLabel->setText(tr("GETTING STARTED"));
+    auto* layout = new QHBoxLayout(this);
 
     _bodyLabel->setWordWrap(true);
     _bodyLabel->setOpenExternalLinks(true);
@@ -53,6 +47,15 @@ GettingStartedCard::GettingStartedCard(QWidget* parent)
            "walks you through your first part in 5 minutes.")
     );
 
-    layout->addWidget(_titleLabel);
-    layout->addWidget(_bodyLabel);
+    _closeButton->setObjectName(QStringLiteral("gettingStartedCloseBtn"));
+    _closeButton->setFlat(true);
+    _closeButton->setText(QStringLiteral("\u00D7"));  // multiplication sign as X
+    _closeButton->setFixedSize(20, 20);
+    _closeButton->setToolTip(tr("Dismiss"));
+    connect(_closeButton, &QPushButton::clicked, this, [this]() {
+        Q_EMIT dismissed();
+    });
+
+    layout->addWidget(_bodyLabel, 1);
+    layout->addWidget(_closeButton, 0, Qt::AlignTop);
 }

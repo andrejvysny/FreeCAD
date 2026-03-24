@@ -7,7 +7,7 @@
  *                                                                          *
  *   FreeCAD is free software: you can redistribute it and/or modify it     *
  *   under the terms of the GNU Lesser General Public License as            *
- *   published by the Free Software Foundation, either version 2.1 of the   *
+ *   published by the Free Software Foundation, either version 2.1 of the  *
  *   License, or (at your option) any later version.                        *
  *                                                                          *
  *   FreeCAD is distributed in the hope that it will be useful, but         *
@@ -22,9 +22,11 @@
  ***************************************************************************/
 
 
+#include <QFont>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPixmap>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QVBoxLayout>
@@ -41,7 +43,7 @@
 using namespace StartGui;
 
 FirstStartWidget::FirstStartWidget(QWidget* parent)
-    : QGroupBox(parent)
+    : QWidget(parent)
     , _themeSelectorWidget {nullptr}
     , _generalSettingsWidget {nullptr}
     , _welcomeLabel {nullptr}
@@ -55,20 +57,48 @@ FirstStartWidget::FirstStartWidget(QWidget* parent)
 
 void FirstStartWidget::setupUi()
 {
+    setMaximumWidth(700);
+
     auto outerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
-    outerLayout->setAlignment(Qt::AlignCenter);
+    outerLayout->setSpacing(24);
+    outerLayout->setContentsMargins(32, 32, 32, 32);
+
+    // Wordmark
+    _wordmarkLabel = gsl::owner<QLabel*>(new QLabel);
+    _wordmarkLabel->setFixedHeight(48);
+    _wordmarkLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    QPixmap wordmark(QStringLiteral(":/branding/FreeCAD-wordmark.svg"));
+    if (!wordmark.isNull()) {
+        _wordmarkLabel->setPixmap(wordmark.scaledToHeight(48, Qt::SmoothTransformation));
+    }
+    outerLayout->addWidget(_wordmarkLabel);
+
+    // Welcome label — bold, large
     _welcomeLabel = gsl::owner<QLabel*>(new QLabel);
+    QFont welcomeFont = _welcomeLabel->font();
+    welcomeFont.setPointSize(18);
+    welcomeFont.setBold(true);
+    _welcomeLabel->setFont(welcomeFont);
     outerLayout->addWidget(_welcomeLabel);
+
+    // Description label
     _descriptionLabel = gsl::owner<QLabel*>(new QLabel);
+    _descriptionLabel->setWordWrap(true);
     outerLayout->addWidget(_descriptionLabel);
 
-    _themeSelectorWidget = gsl::owner<ThemeSelectorWidget*>(new ThemeSelectorWidget(this));
+    // Settings
     _generalSettingsWidget = gsl::owner<GeneralSettingsWidget*>(new GeneralSettingsWidget(this));
-
     outerLayout->addWidget(_generalSettingsWidget);
+
+    // Theme
+    _themeSelectorWidget = gsl::owner<ThemeSelectorWidget*>(new ThemeSelectorWidget(this));
     outerLayout->addWidget(_themeSelectorWidget);
 
+    // Button bar
     _doneButton = gsl::owner<QPushButton*>(new QPushButton);
+    _doneButton->setObjectName(QStringLiteral("firstStartDoneButton"));
+    _doneButton->setMinimumWidth(140);
+    _doneButton->setCursor(Qt::PointingHandCursor);
     connect(_doneButton, &QPushButton::clicked, this, &FirstStartWidget::dismissed);
     auto buttonBar = gsl::owner<QHBoxLayout*>(new QHBoxLayout);
     buttonBar->setAlignment(Qt::AlignRight);
@@ -88,11 +118,9 @@ bool FirstStartWidget::eventFilter(QObject* object, QEvent* event)
 
 void FirstStartWidget::retranslateUi()
 {
-    _doneButton->setText(tr("Done"));
+    _doneButton->setText(tr("Get Started"));
     QString application = QString::fromStdString(App::Application::getExecutableName());
-    _welcomeLabel->setText(
-        QLatin1String("<h1>") + tr("Welcome to %1").arg(application) + QLatin1String("</h1>")
-    );
+    _welcomeLabel->setText(tr("Welcome to %1").arg(application));
     _descriptionLabel->setText(
         tr("Set your basic configuration options below.") + QLatin1String(" ")
         + tr("These options (and many more) can be changed later in the preferences.")

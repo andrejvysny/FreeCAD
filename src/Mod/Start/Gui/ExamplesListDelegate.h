@@ -42,10 +42,10 @@ public:
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
-    static constexpr int thumbnailSize = 32;
-    static constexpr int margin = 6;
-    static constexpr int spacing = 4;
-    static constexpr int rowHeight = 48;
+    static constexpr int thumbnailSize = 36;
+    static constexpr int margin = 4;
+    static constexpr int spacing = 6;
+    static constexpr int rowHeight = 46;
 };
 
 }  // namespace StartGui

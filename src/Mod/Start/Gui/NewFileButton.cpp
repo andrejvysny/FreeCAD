@@ -21,6 +21,7 @@
  *                                                                          *
  ***************************************************************************/
 
+#include <QCursor>
 #include <QLabel>
 #include <QFont>
 #include <QIcon>
@@ -42,6 +43,7 @@ NewFileButton::NewFileButton(const NewButton& newButton, bool compact)
     , descriptionLabel(new QLabel())
 {
     setObjectName(QStringLiteral("newFileButton"));
+    setCursor(Qt::PointingHandCursor);
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
@@ -50,7 +52,7 @@ NewFileButton::NewFileButton(const NewButton& newButton, bool compact)
     labelWidth = int(hGrp->GetInt("FileCardLabelWith", defaultWidth));
 
     constexpr int defaultSize = 48;
-    constexpr int compactIconSize = 24;
+    constexpr int compactIconSize = 32;
     iconSize = isCompact ? compactIconSize : int(hGrp->GetInt("NewFileIconSize", defaultSize));
 
     auto iconLabel = new QLabel(this);
@@ -79,8 +81,8 @@ NewFileButton::NewFileButton(const NewButton& newButton, bool compact)
 
     if (isCompact) {
         descriptionLabel->hide();
-        mainLayout->setSpacing(6);
-        mainLayout->setContentsMargins(8, 6, 12, 6);
+        mainLayout->setSpacing(8);
+        mainLayout->setContentsMargins(10, 8, 16, 8);
         setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     }
     else {

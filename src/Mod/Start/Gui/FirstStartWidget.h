@@ -24,7 +24,6 @@
 #pragma once
 
 #include <QWidget>
-#include <QGroupBox>
 
 class QLabel;
 class QPushButton;
@@ -35,7 +34,7 @@ namespace StartGui
 class ThemeSelectorWidget;
 class GeneralSettingsWidget;
 
-class FirstStartWidget: public QGroupBox
+class FirstStartWidget: public QWidget
 {
     Q_OBJECT
 public:
@@ -50,6 +49,7 @@ private:
     ThemeSelectorWidget* _themeSelectorWidget;
     GeneralSettingsWidget* _generalSettingsWidget;
 
+    QLabel* _wordmarkLabel = nullptr;
     QLabel* _welcomeLabel;
     QLabel* _descriptionLabel;
     QPushButton* _doneButton;

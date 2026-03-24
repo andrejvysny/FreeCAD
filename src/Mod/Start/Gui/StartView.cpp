@@ -32,6 +32,9 @@
 #include <QMdiSubWindow>
 #include <QMenu>
 #include <QMessageBox>
+#include <QCursor>
+#include <QPalette>
+#include <QPixmap>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollArea>
@@ -73,6 +76,11 @@ TYPESYSTEM_SOURCE_ABSTRACT(StartGui::StartView, Gui::MDIView)  // NOLINT
 namespace
 {
 
+static constexpr int kPageMargin = 24;
+static constexpr int kTopMargin = 32;
+static constexpr int kBottomMargin = 16;
+static constexpr int kSectionSpacing = 16;
+
 QLabel* makeSectionLabel(const QString& text, QWidget* parent = nullptr)
 {
     auto label = gsl::owner<QLabel*>(new QLabel(text, parent));
@@ -94,7 +102,7 @@ StartView::StartView(QWidget* parent)
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    auto cardSpacing = hGrp->GetInt("FileCardSpacing", 15);  // NOLINT
+    auto cardSpacing = hGrp->GetInt("FileCardSpacing", 20);  // NOLINT
     auto showExamples = hGrp->GetBool("ShowExamples", true);
 
     std::string customFolder(hGrp->GetASCII("CustomFolder", ""));
@@ -118,57 +126,63 @@ StartView::StartView(QWidget* parent)
     _contents->addWidget(firstStartScrollArea);
 
     // =========================================================================
-    // Documents page — redesigned two-column layout
+    // Documents page — two-column layout (full height sidebar)
     // =========================================================================
     auto documentsWidget = gsl::owner<QWidget*>(new QWidget());
     _contents->addWidget(documentsWidget);
-    auto documentsMainLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout());
-    documentsMainLayout->setContentsMargins(0, 0, 0, 0);
-    documentsWidget->setLayout(documentsMainLayout);
 
-    // --- Header: FreeCAD icon + version ---
-    auto headerLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
-    headerLayout->setContentsMargins(8, 8, 8, 0);
-    auto logoLabel = gsl::owner<QLabel*>(new QLabel());
-    logoLabel->setPixmap(QIcon(QLatin1String(":/icons/freecad.svg")).pixmap(32, 32));
-    _headerLabel = gsl::owner<QLabel*>(new QLabel());
-    _headerLabel->setObjectName(QStringLiteral("startPageHeader"));
-    headerLayout->addWidget(logoLabel);
-    headerLayout->addWidget(_headerLabel);
-    headerLayout->addStretch();
-    documentsMainLayout->addLayout(headerLayout);
+    // Read max content size preferences for centering on large screens
+    _maxContentWidth = static_cast<int>(hGrp->GetInt("MaxContentWidth", defaultMaxContentWidth));
+    _maxContentHeight = static_cast<int>(hGrp->GetInt("MaxContentHeight", defaultMaxContentHeight));
 
-    // --- Body: two-column layout ---
+    // Top-level: two-column HBox — margins set dynamically for centering
     _bodyLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
     _bodyLayout->setSpacing(0);
-    documentsMainLayout->addLayout(_bodyLayout, 1);
+    _bodyLayout->setContentsMargins(0, 0, 0, 0);
+    documentsWidget->setLayout(_bodyLayout);
 
     // ---- Left column (scrollable main content) ----
-    auto leftScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
-    leftScrollArea->setFrameShape(QFrame::NoFrame);
-    leftScrollArea->setStyleSheet(QStringLiteral("QScrollArea { border: none; background: transparent; }"));
-    leftScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
-    leftScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
-    leftScrollArea->setWidgetResizable(true);
-    auto leftScrollWidget = gsl::owner<QWidget*>(new QWidget(leftScrollArea));
-    leftScrollArea->setWidget(leftScrollWidget);
-    _leftContentLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(leftScrollWidget));
+    _leftScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
+    _leftScrollArea->setObjectName(QStringLiteral("startLeftScrollArea"));
+    _leftScrollArea->setFrameShape(QFrame::NoFrame);
+    _leftScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
+    _leftScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    _leftScrollArea->setWidgetResizable(true);
+    _leftContentWidget = gsl::owner<QWidget*>(new QWidget(_leftScrollArea));
+    _leftScrollArea->setWidget(_leftContentWidget);
+    _leftContentLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_leftContentWidget));
     _leftContentLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinAndMaxSize);
+    _leftContentLayout->setContentsMargins(kPageMargin, kTopMargin, kPageMargin, kBottomMargin);
 
-    // RECENT FILES section
+    // Wordmark header (first row in left column)
+    _wordmarkLabel = gsl::owner<QLabel*>(new QLabel());
+    _wordmarkLabel->setFixedHeight(72);
+    _wordmarkLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    updateWordmark();
+    _leftContentLayout->addWidget(_wordmarkLabel);
+    _leftContentLayout->addSpacing(kSectionSpacing);
+
+    // Version label (shown in footer, set by retranslateUi)
+    _headerLabel = gsl::owner<QLabel*>(new QLabel());
+    _headerLabel->setObjectName(QStringLiteral("startVersionLabel"));
+    // Tagline label (unused, kept for retranslateUi compat)
+    _headerTaglineLabel = gsl::owner<QLabel*>(new QLabel());
+    _headerTaglineLabel->hide();
+
+
+    // RECENT FILES section (flat, no card)
     _recentFilesLabel = makeSectionLabel(QString());
     _leftContentLayout->addWidget(_recentFilesLabel);
-
     _recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
     _recentFilesListWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    _recentFilesListWidget->setCursor(Qt::PointingHandCursor);
     connect(_recentFilesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
     connect(_recentFilesListWidget, &QWidget::customContextMenuRequested, this, &StartView::fileCardContextMenu);
     _leftContentLayout->addWidget(_recentFilesListWidget);
 
-    // CREATE NEW section
+    // CREATE NEW section (flat, no card)
     _createNewLabel = makeSectionLabel(QString());
     _leftContentLayout->addWidget(_createNewLabel);
-
     auto createNewRow = gsl::owner<QWidget*>(new QWidget);
     auto flowLayout = gsl::owner<FlowLayout*>(new FlowLayout);
     flowLayout->setContentsMargins({});
@@ -187,20 +201,43 @@ StartView::StartView(QWidget* parent)
         _leftContentLayout->addWidget(customFolderListWidget);
     }
 
-    // GETTING STARTED card
-    auto gettingStartedCard = gsl::owner<GettingStartedCard*>(new GettingStartedCard());
-    _leftContentLayout->addWidget(gettingStartedCard);
+    // GETTING STARTED card (dismissible)
+    auto showGettingStarted = hGrp->GetBool("ShowGettingStarted", true);
+    _gettingStartedLabel = makeSectionLabel(QString());
+    _gettingStartedCard = gsl::owner<GettingStartedCard*>(new GettingStartedCard());
+    if (showGettingStarted) {
+        _leftContentLayout->addWidget(_gettingStartedLabel);
+        _leftContentLayout->addWidget(_gettingStartedCard);
+    }
+    else {
+        _gettingStartedLabel->hide();
+        _gettingStartedCard->hide();
+    }
+    connect(_gettingStartedCard, &GettingStartedCard::dismissed, this, [this]() {
+        _gettingStartedLabel->hide();
+        _gettingStartedCard->hide();
+        auto grp = App::GetApplication().GetParameterGroupByPath(
+            "User parameter:BaseApp/Preferences/Mod/Start");
+        grp->SetBool("ShowGettingStarted", false);
+    });
 
     _leftContentLayout->setSpacing(static_cast<int>(cardSpacing));
-    _leftContentLayout->addStretch();
+    _leftContentLayout->addStretch(1);
 
-    _bodyLayout->addWidget(leftScrollArea, 7);
+    _bodyLayout->addWidget(_leftScrollArea, 7);
 
-    // ---- Right column (sidebar in scroll area) ----
+    // ---- Vertical sidebar divider ----
+    _sidebarDivider = gsl::owner<QFrame*>(new QFrame());
+    _sidebarDivider->setObjectName(QStringLiteral("startSidebarDivider"));
+    _sidebarDivider->setFrameShape(QFrame::VLine);
+    _sidebarDivider->setFixedWidth(1);
+    _bodyLayout->addWidget(_sidebarDivider);
+
+    // ---- Right column (full-height sidebar) ----
     _rightScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
+    _rightScrollArea->setObjectName(QStringLiteral("startRightScrollArea"));
     auto rightScrollArea = _rightScrollArea;
     rightScrollArea->setFrameShape(QFrame::NoFrame);
-    rightScrollArea->setStyleSheet(QStringLiteral("QScrollArea { border: none; background: transparent; }"));
     rightScrollArea->setWidgetResizable(true);
     rightScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     rightScrollArea->setMinimumWidth(250);
@@ -209,10 +246,11 @@ StartView::StartView(QWidget* parent)
     _rightPanel = gsl::owner<QWidget*>(new QWidget());
     rightScrollArea->setWidget(_rightPanel);
     auto rightLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_rightPanel));
-    rightLayout->setContentsMargins(8, 0, 8, 0);
+    rightLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinAndMaxSize);
+    rightLayout->setContentsMargins(kPageMargin, kPageMargin, kPageMargin, kPageMargin);
 
-    // EXAMPLES section in sidebar
-    _examplesContainer = gsl::owner<QWidget*>(new QWidget());
+    // EXAMPLES section in sidebar (flat, no card)
+    _examplesContainer = gsl::owner<QFrame*>(new QFrame());
     auto examplesLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_examplesContainer));
     examplesLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -228,6 +266,7 @@ StartView::StartView(QWidget* parent)
         examplesListWidget->setFrameShape(QFrame::NoFrame);
         examplesListWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         examplesListWidget->setMouseTracking(true);
+        examplesListWidget->setCursor(Qt::PointingHandCursor);
         examplesListWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         auto examplesDelegate = gsl::owner<ExamplesListDelegate*>(new ExamplesListDelegate(examplesListWidget));
         examplesListWidget->setItemDelegate(examplesDelegate);
@@ -238,14 +277,18 @@ StartView::StartView(QWidget* parent)
     _browseExamplesButton = gsl::owner<QPushButton*>(new QPushButton());
     _browseExamplesButton->setObjectName(QStringLiteral("learnLink"));
     _browseExamplesButton->setFlat(true);
-    _browseExamplesButton->setIcon(QIcon(QLatin1String(":/icons/list-add.svg")));
+    _browseExamplesButton->setCursor(Qt::PointingHandCursor);
+    _browseExamplesButton->setIcon(QIcon(QLatin1String(":/icons/document-open.svg")));
     connect(_browseExamplesButton, &QPushButton::clicked, this, &StartView::openExistingFile);
     examplesLayout->addWidget(_browseExamplesButton);
 
-    rightLayout->addWidget(_examplesContainer);
+    rightLayout->addWidget(_examplesContainer, 1);  // stretch to fill
 
-    // LEARN section in sidebar
-    _learnContainer = gsl::owner<QWidget*>(new QWidget());
+    // Stretch pushes Learn to bottom
+    rightLayout->addStretch();
+
+    // LEARN section at bottom of sidebar
+    _learnContainer = gsl::owner<QFrame*>(new QFrame());
     auto learnContainerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_learnContainer));
     learnContainerLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -259,9 +302,9 @@ StartView::StartView(QWidget* parent)
 
     _bodyLayout->addWidget(rightScrollArea, 3);
 
-    // --- Footer ---
+    // --- Footer (inside left column, after stretch) ---
     auto footerLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
-    documentsMainLayout->addLayout(footerLayout);
+    _leftContentLayout->addLayout(footerLayout);
 
     _openFirstStart = gsl::owner<QPushButton*>(new QPushButton());
     _openFirstStart->setIcon(QIcon(QLatin1String(":/icons/preferences-general.svg")));
@@ -275,6 +318,8 @@ StartView::StartView(QWidget* parent)
     connect(_showOnStartupCheckBox, &QCheckBox::toggled, this, &StartView::showOnStartupChanged);
 
     footerLayout->addWidget(_openFirstStart);
+    footerLayout->addStretch();
+    footerLayout->addWidget(_headerLabel);
     footerLayout->addStretch();
     footerLayout->addWidget(_showOnStartupCheckBox);
 
@@ -581,6 +626,17 @@ void StartView::changeEvent(QEvent* event)
         this->retranslateUi();
     }
 
+    if (event->type() == QEvent::PaletteChange
+        || event->type() == QEvent::StyleChange) {
+        updateWordmark();
+        if (_rightPanel) {
+            _rightPanel->updateGeometry();
+        }
+        if (_rightScrollArea) {
+            _rightScrollArea->updateGeometry();
+        }
+    }
+
     Gui::MDIView::changeEvent(event);
 }
 
@@ -597,6 +653,7 @@ void StartView::showEvent(QShowEvent* event)
             );
         }
     }
+    updateWordmark();  // re-check wordmark after stylesheet is applied
     Gui::MDIView::showEvent(event);
 }
 
@@ -604,6 +661,57 @@ void StartView::resizeEvent(QResizeEvent* event)
 {
     Gui::MDIView::resizeEvent(event);
     updateLayout();
+    updateContentCentering();
+}
+
+
+void StartView::updateContentCentering()
+{
+    if (!_bodyLayout || !_contents) {
+        return;
+    }
+
+    int availW = _contents->width();
+    int availH = _contents->height();
+
+    int marginH = (_maxContentWidth > 0) ? qMax(0, (availW - _maxContentWidth) / 2) : 0;
+    int marginV = (_maxContentHeight > 0) ? qMax(0, (availH - _maxContentHeight) / 2) : 0;
+
+    _bodyLayout->setContentsMargins(marginH, marginV, marginH, marginV);
+}
+
+void StartView::updateWordmark()
+{
+    if (!_wordmarkLabel) {
+        return;
+    }
+
+    bool isDark = false;
+
+    auto hGrp = App::GetApplication().GetParameterGroupByPath(
+        "User parameter:BaseApp/Preferences/MainWindow"
+    );
+    auto theme = QString::fromStdString(hGrp->GetASCII("Theme", "Classic"));
+
+    if (theme.contains(QLatin1String("Dark"), Qt::CaseInsensitive)) {
+        isDark = true;
+    }
+    else if (theme.contains(QLatin1String("Light"), Qt::CaseInsensitive)) {
+        isDark = false;
+    }
+    else {
+        QColor bg = _wordmarkLabel->palette().color(QPalette::Window);
+        double luminance = 0.299 * bg.redF() + 0.587 * bg.greenF() + 0.114 * bg.blueF();
+        isDark = luminance < 0.5;
+    }
+
+    QString wordmarkPath = isDark
+        ? QStringLiteral(":/branding/FreeCAD-wordmark-light.svg")
+        : QStringLiteral(":/branding/FreeCAD-wordmark.svg");
+    QPixmap wordmark(wordmarkPath);
+    if (!wordmark.isNull()) {
+        _wordmarkLabel->setPixmap(wordmark.scaledToHeight(56, Qt::SmoothTransformation));
+    }
 }
 
 void StartView::updateLayout()
@@ -631,11 +739,17 @@ void StartView::updateLayout()
         if (_rightScrollArea) {
             _rightScrollArea->show();
         }
+        if (_sidebarDivider) {
+            _sidebarDivider->show();
+        }
     }
     else {
         // Collapse to single column: move sidebar widgets into left content
         if (_rightScrollArea) {
             _rightScrollArea->hide();
+        }
+        if (_sidebarDivider) {
+            _sidebarDivider->hide();
         }
         // Insert before the stretch at the end
         int insertIdx = _leftContentLayout->count() - 1;  // before stretch
@@ -676,16 +790,19 @@ void StartView::retranslateUi()
     // Header
     auto versionStr = QString::fromUtf8(App::Application::Config()["ExeVersion"].c_str());
     auto appName = QString::fromUtf8(App::Application::Config()["ExeName"].c_str());
-    _headerLabel->setText(QStringLiteral("<h2>%1 %2</h2>").arg(appName, versionStr));
+    _headerLabel->setText(QStringLiteral("v%1").arg(versionStr));
+    if (_headerTaglineLabel) {
+        _headerTaglineLabel->setText(tr("Open Source Parametric 3D Modeler"));
+    }
 
     // Section labels
-    _recentFilesLabel->setText(tr("RECENT FILES"));
-    _createNewLabel->setText(tr("CREATE NEW"));
+    _recentFilesLabel->setText(tr("Recent Files"));
+    _createNewLabel->setText(tr("Create New"));
     if (_examplesSectionLabel) {
-        _examplesSectionLabel->setText(tr("EXAMPLES"));
+        _examplesSectionLabel->setText(tr("Examples"));
     }
     if (_learnSectionLabel) {
-        _learnSectionLabel->setText(tr("LEARN"));
+        _learnSectionLabel->setText(tr("Learn"));
     }
 
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
@@ -700,6 +817,9 @@ void StartView::retranslateUi()
         _customFolderLabel->setText(QString::fromUtf8(customFolder.c_str()));
     }
 
+    if (_gettingStartedLabel) {
+        _gettingStartedLabel->setText(tr("Getting Started"));
+    }
     if (_browseExamplesButton) {
         _browseExamplesButton->setText(tr("Browse all examples..."));
     }

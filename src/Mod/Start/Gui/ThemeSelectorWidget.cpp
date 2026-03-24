@@ -136,7 +136,7 @@ void ThemeSelectorWidget::setupButtons(QBoxLayout* layout)
         button->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextUnderIcon);
         button->setText(theme.second);
         button->setIcon(iconMap[theme.first]);
-        button->setIconSize(iconMap[theme.first].actualSize(QSize(256, 256)));
+        button->setIconSize(QSize(200, 140));
         if (theme.first == Theme::Classic && styleSheetName.isEmpty()) {
             button->setChecked(true);
         }
@@ -163,8 +163,14 @@ void ThemeSelectorWidget::setupButtons(QBoxLayout* layout)
 void ThemeSelectorWidget::setupUi()
 {
     auto* outerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+    outerLayout->setSpacing(8);
     auto* buttonLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout);
+    buttonLayout->setSpacing(16);
     _titleLabel = gsl::owner<QLabel*>(new QLabel);
+    QFont titleFont = _titleLabel->font();
+    titleFont.setBold(true);
+    _titleLabel->setFont(titleFont);
     _descriptionLabel = gsl::owner<QLabel*>(new QLabel);
     outerLayout->addWidget(_titleLabel);
     outerLayout->addLayout(buttonLayout);
@@ -244,7 +250,7 @@ bool ThemeSelectorWidget::eventFilter(QObject* object, QEvent* event)
 
 void ThemeSelectorWidget::retranslateUi()
 {
-    _titleLabel->setText(QLatin1String("<h2>") + tr("Theme") + QLatin1String("</h2>"));
+    _titleLabel->setText(tr("Theme"));
     if (Gui::Application::Instance->commandManager().getCommandByName("Std_AddonMgr")) {
         _descriptionLabel->setText(
             tr("Looking for more themes? You can obtain them using "

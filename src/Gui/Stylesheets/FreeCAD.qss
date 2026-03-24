@@ -2646,6 +2646,13 @@ QMdiSubWindow:active {
 /*==================================================================================================
 Start page
 ==================================================================================================*/
+/* Override Gui--MDIView QScrollArea border for Start page scroll areas */
+QScrollArea#startLeftScrollArea,
+QScrollArea#startRightScrollArea {
+  border: none;
+  background-color: transparent;
+}
+
 QWidget#thumbnailWidget {
   background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 @ButtonTopBackgroundColor,stop:1 @ButtonBottomBackgroundColor);
   border-radius: 8px;
@@ -2660,35 +2667,82 @@ QWidget#thumbnailWidget[state="pressed"] {
   border: 1px solid @AccentColor;
 }
 
-/* Start page header */
-QLabel#startPageHeader {
-  color: @TextColor;
+/* Start page tagline */
+QLabel#startHeaderTagline {
+  color: @TextDisabledColor;
+  font-size: 13px;
+  padding-top: 2px;
 }
 
 /* Start page section labels */
 QLabel#startSectionLabel {
-  color: @TextDisabledColor;
+  color: @TextColor;
+  font-size: 14px;
+  font-weight: bold;
   padding: 4px 0;
+}
+
+/* Vertical sidebar divider */
+QFrame#startSidebarDivider {
+  background-color: @GeneralBorderColor;
+  border: none;
+  min-width: 1px;
+  max-width: 1px;
+}
+
+/* Version label in footer */
+QLabel#startVersionLabel {
+  color: @TextDisabledColor;
+  font-size: 11px;
 }
 
 /* Getting started info card */
 QFrame#gettingStartedCard {
-  background-color: @PrimaryColor;
-  border-left: 3px solid @AccentColor;
-  border-radius: 4px;
-  padding: 12px;
+  background-color: rgba(65, 143, 222, 0.1);
+  border: none;
+  border-radius: 16px;
+  padding: 14px 20px;
+  color: @AccentColor;
 }
 
-/* Compact new file pill buttons */
+QFrame#gettingStartedCard QLabel {
+  color: @AccentColor;
+}
+
+/* Getting started dismiss button — transparent by default, revealed on card hover */
+QPushButton#gettingStartedCloseBtn {
+  border: none;
+  background: transparent;
+  color: transparent;
+  font-size: 16px;
+  padding: 0;
+}
+
+QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn {
+  color: @AccentColor;
+}
+
+QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn:hover {
+  color: @TextColor;
+}
+
+/* Compact new file pill buttons — match file card border style */
 #CreateNewRow > QPushButton#newFileButton {
-  border-radius: 8px;
-  padding: 6px 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(128, 128, 128, 0.35);
+  padding: 8px 16px;
+  background: transparent;
+}
+
+#CreateNewRow > QPushButton#newFileButton:hover {
+  border: 2px solid rgba(65, 143, 222, 0.6);
 }
 
 /* Sidebar examples list */
 QListView#examplesListView {
   background-color: transparent;
   border: none;
+
 }
 
 /* Learn section links */
@@ -2698,11 +2752,26 @@ QPushButton#learnLink {
   border: none;
   background: transparent;
   color: @AccentColor;
+
 }
 
 QPushButton#learnLink:hover {
   color: @AccentColor;
   text-decoration: underline;
+}
+
+/* First Start Setup - Get Started button */
+QPushButton#firstStartDoneButton {
+  background-color: @AccentColor;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 32px;
+  font-size: 13px;
+  font-weight: bold;
+}
+QPushButton#firstStartDoneButton:hover {
+  opacity: 0.85;
 }
 
 /**

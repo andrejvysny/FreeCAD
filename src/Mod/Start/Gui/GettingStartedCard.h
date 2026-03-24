@@ -26,18 +26,24 @@
 #include <QFrame>
 
 class QLabel;
+class QPushButton;
 
 namespace StartGui
 {
 
 class GettingStartedCard: public QFrame
 {
+    Q_OBJECT
+
 public:
     explicit GettingStartedCard(QWidget* parent = nullptr);
 
+Q_SIGNALS:
+    void dismissed();
+
 private:
-    QLabel* _titleLabel;
     QLabel* _bodyLabel;
+    QPushButton* _closeButton;
 };
 
 }  // namespace StartGui
