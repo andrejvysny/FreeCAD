@@ -244,7 +244,7 @@ bool ThemeSelectorWidget::eventFilter(QObject* object, QEvent* event)
 
 void ThemeSelectorWidget::retranslateUi()
 {
-    _titleLabel->setText(QLatin1String("<h2>") + tr("Theme") + QLatin1String("</h2>"));
+    _titleLabel->setText(QLatin1String("<b>") + tr("Theme") + QLatin1String("</b>"));
     if (Gui::Application::Instance->commandManager().getCommandByName("Std_AddonMgr")) {
         _descriptionLabel->setText(
             tr("Looking for more themes? You can obtain them using "

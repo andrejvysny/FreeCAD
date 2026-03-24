@@ -96,9 +96,9 @@ void GeneralSettingsWidget::createHorizontalUi()
 
 QString GeneralSettingsWidget::createLabelText(const QString& translatedText) const
 {
-    static const auto h2Start = QLatin1String("<h2>");
-    static const auto h2End = QLatin1String("</h2>");
-    return h2Start + translatedText + h2End;
+    static const auto boldStart = QLatin1String("<b>");
+    static const auto boldEnd = QLatin1String("</b>");
+    return boldStart + translatedText + boldEnd;
 }
 
 gsl::owner<QComboBox*> GeneralSettingsWidget::createLanguageComboBox()
