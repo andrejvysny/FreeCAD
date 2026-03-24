@@ -109,20 +109,23 @@ StartView::StartView(QWidget* parent)
     bool showCustomFolder = !customFolder.empty();
 
     // =========================================================================
-    // First Start page (unchanged)
+    // First Start wizard (overlay background)
     // =========================================================================
     auto firstStartScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
+    firstStartScrollArea->setObjectName(QStringLiteral("wizardOverlayScrollArea"));
     firstStartScrollArea->setFrameShape(QFrame::NoFrame);
-    firstStartScrollArea->setStyleSheet(QStringLiteral("QScrollArea { border: none; background: transparent; }"));
+    firstStartScrollArea->setWidgetResizable(true);
+    firstStartScrollArea->setStyleSheet(QStringLiteral("background: rgba(0,0,0,0.3); border: none;"));
+
     auto firstStartScrollWidget = gsl::owner<QWidget*>(new QWidget(firstStartScrollArea));
     firstStartScrollArea->setWidget(firstStartScrollWidget);
-    firstStartScrollArea->setWidgetResizable(true);
 
-    auto firstStartRegion = gsl::owner<QHBoxLayout*>(new QHBoxLayout(firstStartScrollWidget));
+    auto firstStartRegion = gsl::owner<QVBoxLayout*>(new QVBoxLayout(firstStartScrollWidget));
+    firstStartRegion->setContentsMargins(32, 32, 32, 32);
     firstStartRegion->setAlignment(Qt::AlignCenter);
-    auto firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(this));
-    connect(firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
-    firstStartRegion->addWidget(firstStartWidget);
+    _firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(this));
+    connect(_firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
+    firstStartRegion->addWidget(_firstStartWidget);
     _contents->addWidget(firstStartScrollArea);
 
     // =========================================================================
@@ -328,7 +331,7 @@ StartView::StartView(QWidget* parent)
     // =========================================================================
     // Configure models and page selection
     // =========================================================================
-    auto firstStart = hGrp->GetBool("FirstStart2024", true);
+    auto firstStart = hGrp->GetBool("FirstStart2025", true);
     _contents->setCurrentWidget(firstStart ? firstStartScrollArea : documentsWidget);
 
     // Set up proxy model for recent files (appends "Open file..." card)
@@ -593,6 +596,9 @@ void StartView::showOnStartupChanged(bool checked)
 
 void StartView::openFirstStartClicked()
 {
+    if (_firstStartWidget) {
+        _firstStartWidget->resetToFirstStep();
+    }
     _contents->setCurrentIndex(0);
 }
 
@@ -601,7 +607,7 @@ void StartView::firstStartWidgetDismissed()
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    hGrp->SetBool("FirstStart2024", false);
+    hGrp->SetBool("FirstStart2025", false);
     _contents->setCurrentIndex(1);
 }
 

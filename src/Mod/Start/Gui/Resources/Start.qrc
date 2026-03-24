@@ -3,9 +3,19 @@
         <file>icons/StartCommandIcon.svg</file>
         <file>icons/preferences-start.svg</file>
         <file>icons/PartDesignWorkbench.svg</file>
+        <file>icons/nav-cad.svg</file>
+        <file>icons/nav-blender.svg</file>
+        <file>icons/nav-touchpad.svg</file>
+        <file>icons/icon-beginner.svg</file>
+        <file>icons/icon-experienced.svg</file>
+        <file>icons/checkmark-circle.svg</file>
         <file>thumbnails/Theme_thumbnail_classic.png</file>
         <file>thumbnails/Theme_thumbnail_light.png</file>
         <file>thumbnails/Theme_thumbnail_dark.png</file>
+        <file>thumbnails/theme-light-preview.svg</file>
+        <file>thumbnails/theme-dark-preview.svg</file>
+        <file>thumbnails/layout-modern.svg</file>
+        <file>thumbnails/layout-classic.svg</file>
         <file>branding/FreeCAD-wordmark.svg</file>
         <file>branding/FreeCAD-wordmark-light.svg</file>
         <file>branding/FreeCAD-wordmark-mono.svg</file>

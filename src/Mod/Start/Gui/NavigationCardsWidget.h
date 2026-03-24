@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2025 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -24,66 +24,39 @@
 #pragma once
 
 #include <QWidget>
+#include <vector>
 
+class QComboBox;
 class QLabel;
-class QPaintEvent;
-class QStackedWidget;
 
 namespace StartGui
 {
 
-/// Returns true if the current FreeCAD theme is dark
-bool isWizardDarkMode();
+class SelectionCard;
 
-class StepIndicatorWidget;
-class WizardFooter;
-class WizardBasicsPage;
-class WizardWorkflowPage;
-class WizardSummaryPage;
-
-/// 3-step interactive setup wizard shown on first launch.
-/// Contains WizardBasicsPage, WizardWorkflowPage, and WizardSummaryPage.
-class FirstStartWidget: public QWidget
+/// Shows 3 featured navigation style cards (CAD, Blender, Touchpad)
+/// plus an "Other styles..." dropdown for remaining styles.
+/// Cards and dropdown are mutually exclusive.
+class NavigationCardsWidget: public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit FirstStartWidget(QWidget* parent = nullptr);
-    bool eventFilter(QObject* object, QEvent* event) override;
-
-    /// Reset wizard to step 0 (called on reopen from footer)
-    void resetToFirstStep();
-
-    Q_SIGNAL void dismissed();
-
-    void applyThemeColors();
-
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void changeEvent(QEvent* event) override;
+    explicit NavigationCardsWidget(QWidget* parent = nullptr);
+    void retranslateUi();
 
 private:
-    void setupUi();
-    void retranslateUi();
-    void goToStep(int step);
-    void updateHeader();
+    void onCardClicked(int cardIndex);
+    void onDropdownChanged(int comboIndex);
+    void applyNavigationStyle(const QByteArray& styleName);
+    void preselectCurrentStyle();
+    QWidget* createMappingWidget(const char* className);
 
-    static constexpr int totalSteps = 3;
-    int _currentStep = 0;
-
-    // Header
     QLabel* _titleLabel = nullptr;
     QLabel* _subtitleLabel = nullptr;
-    StepIndicatorWidget* _stepIndicator = nullptr;
-
-    // Pages
-    QStackedWidget* _stepsWidget = nullptr;
-    WizardBasicsPage* _basicsPage = nullptr;
-    WizardWorkflowPage* _workflowPage = nullptr;
-    WizardSummaryPage* _summaryPage = nullptr;
-
-    // Footer
-    WizardFooter* _footer = nullptr;
+    std::vector<SelectionCard*> _cards;
+    std::vector<QByteArray> _cardStyleNames;
+    QComboBox* _otherStylesCombo = nullptr;
 };
 
 }  // namespace StartGui

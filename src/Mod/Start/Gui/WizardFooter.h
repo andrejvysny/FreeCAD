@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2025 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -25,65 +25,35 @@
 
 #include <QWidget>
 
-class QLabel;
-class QPaintEvent;
-class QStackedWidget;
+class QPushButton;
 
 namespace StartGui
 {
 
-/// Returns true if the current FreeCAD theme is dark
-bool isWizardDarkMode();
-
-class StepIndicatorWidget;
-class WizardFooter;
-class WizardBasicsPage;
-class WizardWorkflowPage;
-class WizardSummaryPage;
-
-/// 3-step interactive setup wizard shown on first launch.
-/// Contains WizardBasicsPage, WizardWorkflowPage, and WizardSummaryPage.
-class FirstStartWidget: public QWidget
+/// Footer bar for the setup wizard with Skip/Back/Next navigation.
+/// Emits signals for each button. Updates button visibility and text per step.
+class WizardFooter: public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit FirstStartWidget(QWidget* parent = nullptr);
-    bool eventFilter(QObject* object, QEvent* event) override;
+    explicit WizardFooter(int totalSteps, QWidget* parent = nullptr);
 
-    /// Reset wizard to step 0 (called on reopen from footer)
-    void resetToFirstStep();
-
-    Q_SIGNAL void dismissed();
-
+    void setStep(int step);
+    void retranslateUi();
     void applyThemeColors();
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void changeEvent(QEvent* event) override;
+Q_SIGNALS:
+    void skipClicked();
+    void backClicked();
+    void nextClicked();
 
 private:
-    void setupUi();
-    void retranslateUi();
-    void goToStep(int step);
-    void updateHeader();
-
-    static constexpr int totalSteps = 3;
+    int _totalSteps;
     int _currentStep = 0;
-
-    // Header
-    QLabel* _titleLabel = nullptr;
-    QLabel* _subtitleLabel = nullptr;
-    StepIndicatorWidget* _stepIndicator = nullptr;
-
-    // Pages
-    QStackedWidget* _stepsWidget = nullptr;
-    WizardBasicsPage* _basicsPage = nullptr;
-    WizardWorkflowPage* _workflowPage = nullptr;
-    WizardSummaryPage* _summaryPage = nullptr;
-
-    // Footer
-    WizardFooter* _footer = nullptr;
+    QPushButton* _skipButton = nullptr;
+    QPushButton* _backButton = nullptr;
+    QPushButton* _nextButton = nullptr;
 };
 
 }  // namespace StartGui

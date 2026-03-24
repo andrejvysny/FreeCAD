@@ -54,6 +54,7 @@ class Document;
 namespace StartGui
 {
 
+class FirstStartWidget;
 class GettingStartedCard;
 class LearnLinksWidget;
 
@@ -165,6 +166,9 @@ private:
 
     // Browse examples button
     QPushButton* _browseExamplesButton = nullptr;
+
+    // First Start wizard
+    FirstStartWidget* _firstStartWidget = nullptr;
 
     // Footer
     QPushButton* _openFirstStart = nullptr;

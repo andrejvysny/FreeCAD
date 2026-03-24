@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100" viewBox="0 0 160 100">
+  <!-- Modern layout wireframe -->
+  <rect width="160" height="100" rx="4" fill="#f0f0f0" stroke="#ccc" stroke-width="1"/>
+  <!-- Compact toolbar -->
+  <rect x="2" y="2" width="156" height="16" rx="2" fill="#e0e0e0"/>
+  <!-- Left sidebar -->
+  <rect x="2" y="20" width="32" height="78" rx="2" fill="#e8e8e8"/>
+  <!-- Viewport -->
+  <rect x="36" y="20" width="122" height="68" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.5"/>
+  <!-- Status bar -->
+  <rect x="36" y="90" width="122" height="8" rx="1" fill="#eee"/>
+</svg>

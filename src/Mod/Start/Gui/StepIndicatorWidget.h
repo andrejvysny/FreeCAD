@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2025 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -24,66 +24,32 @@
 #pragma once
 
 #include <QWidget>
+#include <vector>
 
 class QLabel;
-class QPaintEvent;
-class QStackedWidget;
 
 namespace StartGui
 {
 
-/// Returns true if the current FreeCAD theme is dark
-bool isWizardDarkMode();
-
-class StepIndicatorWidget;
-class WizardFooter;
-class WizardBasicsPage;
-class WizardWorkflowPage;
-class WizardSummaryPage;
-
-/// 3-step interactive setup wizard shown on first launch.
-/// Contains WizardBasicsPage, WizardWorkflowPage, and WizardSummaryPage.
-class FirstStartWidget: public QWidget
+/// Step progress indicator showing colored dots.
+/// Completed steps = green, current step = blue, future steps = gray.
+class StepIndicatorWidget: public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit FirstStartWidget(QWidget* parent = nullptr);
-    bool eventFilter(QObject* object, QEvent* event) override;
+    explicit StepIndicatorWidget(int stepCount, QWidget* parent = nullptr);
 
-    /// Reset wizard to step 0 (called on reopen from footer)
-    void resetToFirstStep();
-
-    Q_SIGNAL void dismissed();
-
+    void setCurrentStep(int step);
+    int currentStep() const;
     void applyThemeColors();
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void changeEvent(QEvent* event) override;
-
 private:
-    void setupUi();
-    void retranslateUi();
-    void goToStep(int step);
-    void updateHeader();
+    void updateDots();
 
-    static constexpr int totalSteps = 3;
+    int _stepCount;
     int _currentStep = 0;
-
-    // Header
-    QLabel* _titleLabel = nullptr;
-    QLabel* _subtitleLabel = nullptr;
-    StepIndicatorWidget* _stepIndicator = nullptr;
-
-    // Pages
-    QStackedWidget* _stepsWidget = nullptr;
-    WizardBasicsPage* _basicsPage = nullptr;
-    WizardWorkflowPage* _workflowPage = nullptr;
-    WizardSummaryPage* _summaryPage = nullptr;
-
-    // Footer
-    WizardFooter* _footer = nullptr;
+    std::vector<QLabel*> _dots;
 };
 
 }  // namespace StartGui

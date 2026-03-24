@@ -664,7 +664,7 @@ bool MainWindow::checkFirstRun()
     ParameterGrp::handle hGrpFS2024 = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    auto firstStart = hGrpFS2024->GetBool("FirstStart2024", true);  // NOLINT
+    auto firstStart = hGrpFS2024->GetBool("FirstStart2025", true);  // NOLINT
     if (firstStart && RecentFilesCount < 1) {
         return true;
     }

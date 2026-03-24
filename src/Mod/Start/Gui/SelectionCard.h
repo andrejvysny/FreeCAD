@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2025 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -23,67 +23,66 @@
 
 #pragma once
 
-#include <QWidget>
+#include <QFrame>
+#include <QIcon>
+#include <QString>
 
 class QLabel;
-class QPaintEvent;
-class QStackedWidget;
+class QVBoxLayout;
 
 namespace StartGui
 {
 
-/// Returns true if the current FreeCAD theme is dark
-bool isWizardDarkMode();
-
-class StepIndicatorWidget;
-class WizardFooter;
-class WizardBasicsPage;
-class WizardWorkflowPage;
-class WizardSummaryPage;
-
-/// 3-step interactive setup wizard shown on first launch.
-/// Contains WizardBasicsPage, WizardWorkflowPage, and WizardSummaryPage.
-class FirstStartWidget: public QWidget
+/// Reusable selectable card widget for wizard option selection.
+/// Displays an icon, title, optional description, and optional badge.
+/// Supports checkable state with visual border highlight.
+class SelectionCard: public QFrame
 {
     Q_OBJECT
+    Q_PROPERTY(bool checked READ isChecked WRITE setChecked NOTIFY toggled)
 
 public:
-    explicit FirstStartWidget(QWidget* parent = nullptr);
-    bool eventFilter(QObject* object, QEvent* event) override;
+    struct Config
+    {
+        QString title;
+        QString description;
+        QIcon icon;
+        QSize iconSize = {48, 48};
+        QString badge;
+    };
 
-    /// Reset wizard to step 0 (called on reopen from footer)
-    void resetToFirstStep();
+    explicit SelectionCard(const Config& config, QWidget* parent = nullptr);
 
-    Q_SIGNAL void dismissed();
+    void setChecked(bool checked);
+    bool isChecked() const;
 
-    void applyThemeColors();
+    void setTitle(const QString& title);
+    void setDescription(const QString& description);
+    void setBadge(const QString& badge);
+
+    /// Set a custom content widget below the icon (e.g., for nav card text mappings)
+    void setContentWidget(QWidget* widget);
+
+    /// Re-apply card styles (called on theme change)
+    void updateStyle();
+
+Q_SIGNALS:
+    void clicked();
+    void toggled(bool checked);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void changeEvent(QEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 private:
-    void setupUi();
-    void retranslateUi();
-    void goToStep(int step);
-    void updateHeader();
 
-    static constexpr int totalSteps = 3;
-    int _currentStep = 0;
-
-    // Header
+    bool _checked = false;
+    QLabel* _iconLabel = nullptr;
     QLabel* _titleLabel = nullptr;
-    QLabel* _subtitleLabel = nullptr;
-    StepIndicatorWidget* _stepIndicator = nullptr;
-
-    // Pages
-    QStackedWidget* _stepsWidget = nullptr;
-    WizardBasicsPage* _basicsPage = nullptr;
-    WizardWorkflowPage* _workflowPage = nullptr;
-    WizardSummaryPage* _summaryPage = nullptr;
-
-    // Footer
-    WizardFooter* _footer = nullptr;
+    QLabel* _descriptionLabel = nullptr;
+    QLabel* _badgeLabel = nullptr;
+    QVBoxLayout* _mainLayout = nullptr;
+    QWidget* _contentWidget = nullptr;
 };
 
 }  // namespace StartGui

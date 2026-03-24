@@ -2676,7 +2676,7 @@ QLabel#startHeaderTagline {
 
 /* Start page section labels */
 QLabel#startSectionLabel {
-  color: @TextColor;
+  color: @TextForegroundColor;
   font-size: 14px;
   font-weight: bold;
   padding: 4px 0;
@@ -2723,7 +2723,7 @@ QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn {
 }
 
 QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn:hover {
-  color: @TextColor;
+  color: @TextForegroundColor;
 }
 
 /* Compact new file pill buttons — match file card border style */
@@ -2758,20 +2758,6 @@ QPushButton#learnLink {
 QPushButton#learnLink:hover {
   color: @AccentColor;
   text-decoration: underline;
-}
-
-/* First Start Setup - Get Started button */
-QPushButton#firstStartDoneButton {
-  background-color: @AccentColor;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 32px;
-  font-size: 13px;
-  font-weight: bold;
-}
-QPushButton#firstStartDoneButton:hover {
-  opacity: 0.85;
 }
 
 /**

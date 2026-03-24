@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Mouse body -->
+  <rect x="14" y="8" width="36" height="48" rx="18" fill="none" stroke="#888" stroke-width="2"/>
+  <!-- Divider line -->
+  <line x1="32" y1="8" x2="32" y2="32" stroke="#888" stroke-width="1"/>
+  <!-- Middle button (highlighted for Blender orbit) -->
+  <rect x="28" y="18" width="8" height="12" rx="3" fill="#5B7FA5" stroke="#5B7FA5" stroke-width="1"/>
+  <!-- Left button label -->
+  <text x="22" y="28" font-size="7" fill="#888" text-anchor="middle" font-family="sans-serif">L</text>
+  <!-- Right button label -->
+  <text x="42" y="28" font-size="7" fill="#888" text-anchor="middle" font-family="sans-serif">R</text>
+  <!-- Middle button label -->
+  <text x="32" y="28" font-size="7" fill="white" text-anchor="middle" font-family="sans-serif">M</text>
+</svg>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2025 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -25,65 +25,42 @@
 
 #include <QWidget>
 
+class QComboBox;
 class QLabel;
-class QPaintEvent;
-class QStackedWidget;
 
 namespace StartGui
 {
 
-/// Returns true if the current FreeCAD theme is dark
-bool isWizardDarkMode();
+class NavigationCardsWidget;
+class SelectionCard;
 
-class StepIndicatorWidget;
-class WizardFooter;
-class WizardBasicsPage;
-class WizardWorkflowPage;
-class WizardSummaryPage;
-
-/// 3-step interactive setup wizard shown on first launch.
-/// Contains WizardBasicsPage, WizardWorkflowPage, and WizardSummaryPage.
-class FirstStartWidget: public QWidget
+/// Step 1 of the setup wizard: Language, Units, Navigation Style, Theme.
+class WizardBasicsPage: public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit FirstStartWidget(QWidget* parent = nullptr);
-    bool eventFilter(QObject* object, QEvent* event) override;
-
-    /// Reset wizard to step 0 (called on reopen from footer)
-    void resetToFirstStep();
-
-    Q_SIGNAL void dismissed();
-
-    void applyThemeColors();
-
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void changeEvent(QEvent* event) override;
+    explicit WizardBasicsPage(QWidget* parent = nullptr);
+    void retranslateUi();
 
 private:
-    void setupUi();
-    void retranslateUi();
-    void goToStep(int step);
-    void updateHeader();
+    void createLanguageComboBox();
+    void createUnitSystemComboBox();
+    void createThemeCards();
+    void preselectTheme();
 
-    static constexpr int totalSteps = 3;
-    int _currentStep = 0;
+    void onLanguageChanged(int index);
+    void onUnitSystemChanged(int index);
+    void onThemeCardClicked(int themeIndex);
 
-    // Header
-    QLabel* _titleLabel = nullptr;
-    QLabel* _subtitleLabel = nullptr;
-    StepIndicatorWidget* _stepIndicator = nullptr;
-
-    // Pages
-    QStackedWidget* _stepsWidget = nullptr;
-    WizardBasicsPage* _basicsPage = nullptr;
-    WizardWorkflowPage* _workflowPage = nullptr;
-    WizardSummaryPage* _summaryPage = nullptr;
-
-    // Footer
-    WizardFooter* _footer = nullptr;
+    QLabel* _languageLabel = nullptr;
+    QLabel* _unitsLabel = nullptr;
+    QLabel* _themeLabel = nullptr;
+    QComboBox* _languageComboBox = nullptr;
+    QComboBox* _unitSystemComboBox = nullptr;
+    NavigationCardsWidget* _navigationCards = nullptr;
+    SelectionCard* _lightCard = nullptr;
+    SelectionCard* _darkCard = nullptr;
 };
 
 }  // namespace StartGui

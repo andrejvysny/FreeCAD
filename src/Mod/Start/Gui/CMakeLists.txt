@@ -66,10 +66,24 @@ SET(StartGui_SRCS
         OpenFileProxyModel.cpp
         OpenFileProxyModel.h
         PreCompiled.h
+        SelectionCard.cpp
+        SelectionCard.h
         StartView.cpp
         StartView.h
+        StepIndicatorWidget.cpp
+        StepIndicatorWidget.h
         ThemeSelectorWidget.cpp
         ThemeSelectorWidget.h
+        NavigationCardsWidget.cpp
+        NavigationCardsWidget.h
+        WizardBasicsPage.cpp
+        WizardBasicsPage.h
+        WizardFooter.cpp
+        WizardFooter.h
+        WizardWorkflowPage.cpp
+        WizardWorkflowPage.h
+        WizardSummaryPage.cpp
+        WizardSummaryPage.h
         )
 
 SET(StartGuiIcon_SVG
