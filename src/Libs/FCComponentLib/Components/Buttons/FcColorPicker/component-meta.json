@@ -1,0 +1,28 @@
+{
+  "name": "FcColorPicker",
+  "displayName": "Color Picker",
+  "category": "Buttons",
+  "description": "Color picker button with popup grid of standard colors",
+  "sourceFile": "src/Mod/Spreadsheet/Gui/qtcolorpicker.h",
+  "header": "FCComponentLib/Components/Buttons/FcColorPicker.h",
+  "properties": [
+    { "name": "colorDialog", "type": "bool", "default": true, "description": "Whether the custom color dialog is enabled" }
+  ],
+  "signals": [
+    { "name": "colorChanged", "params": ["QColor"], "description": "Emitted when a color is selected from the popup" },
+    { "name": "colorSet", "params": ["QColor"], "description": "Emitted when a color is set programmatically" }
+  ],
+  "slots": [
+    { "name": "setCurrentColor", "params": ["QColor"], "description": "Set the current color" }
+  ],
+  "stories": [
+    { "name": "Default", "description": "Color picker in default state", "props": {} },
+    { "name": "WithStandardColors", "description": "Picker with standard color set loaded", "props": {} },
+    { "name": "NoDialog", "description": "Picker without custom color dialog", "props": { "colorDialog": false } },
+    { "name": "Disabled", "description": "Picker with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QPushButton", "QtWidgets/QFrame", "QtGui/QColor"],
+    "base": []
+  }
+}

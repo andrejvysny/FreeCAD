@@ -1,0 +1,20 @@
+{
+  "name": "FcImageTextEdit",
+  "displayName": "Image Text Edit",
+  "category": "Inputs",
+  "description": "Rich text editor supporting image drops via drag-and-drop or paste",
+  "sourceFile": "src/Mod/TechDraw/Gui/mtextedit.h",
+  "header": "FCComponentLib/Components/Inputs/FcImageTextEdit.h",
+  "properties": [],
+  "signals": [],
+  "slots": [],
+  "stories": [
+    { "name": "Default", "description": "Empty text editor", "props": {} },
+    { "name": "WithText", "description": "Editor with sample text content", "props": {} },
+    { "name": "Disabled", "description": "Editor with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QTextEdit", "QtGui/QImage", "QtCore/QMimeData"],
+    "base": []
+  }
+}

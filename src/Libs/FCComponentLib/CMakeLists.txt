@@ -57,6 +57,36 @@ set(FCComponentLib_Widgets_SRCS
     Components/Inputs/FcComboBox.cpp
     Components/Feedback/FcColorButton.h
     Components/Feedback/FcColorButton.cpp
+    Components/Buttons/FcSplitButton.h
+    Components/Buttons/FcSplitButton.cpp
+    Components/Buttons/FcButtonGroup.h
+    Components/Buttons/FcButtonGroup.cpp
+    Components/Buttons/FcColorPicker.h
+    Components/Buttons/FcColorPickerPrivate.h
+    Components/Buttons/FcColorPicker.cpp
+    Components/Buttons/FcColorPickerPrivate.cpp
+    Components/Inputs/FcElideCheckBox.h
+    Components/Inputs/FcElideCheckBox.cpp
+    Components/Inputs/FcAccelLineEdit.h
+    Components/Inputs/FcAccelLineEdit.cpp
+    Components/Inputs/FcClearLineEdit.h
+    Components/Inputs/FcClearLineEdit.cpp
+    Components/Inputs/FcModifierLineEdit.h
+    Components/Inputs/FcModifierLineEdit.cpp
+    Components/Inputs/FcLabelButton.h
+    Components/Inputs/FcLabelButton.cpp
+    Components/Inputs/FcLabelEditor.h
+    Components/Inputs/FcLabelEditor.cpp
+    Components/Inputs/FcImageTextEdit.h
+    Components/Inputs/FcImageTextEdit.cpp
+    Components/Display/FcUrlLabel.h
+    Components/Display/FcUrlLabel.cpp
+    Components/Display/FcCompassDial.h
+    Components/Display/FcCompassDial.cpp
+    Components/Display/FcPropertyListEditor.h
+    Components/Display/FcPropertyListEditor.cpp
+    Components/Containers/FcActionSelector.h
+    Components/Containers/FcActionSelector.cpp
 )
 
 add_library(FCComponentLib SHARED

@@ -1,0 +1,28 @@
+{
+  "name": "FcUrlLabel",
+  "displayName": "URL Label",
+  "category": "Display",
+  "description": "Clickable label that opens a URL in the system browser",
+  "sourceFile": "src/Gui/Widgets.h",
+  "header": "FCComponentLib/Components/Display/FcUrlLabel.h",
+  "properties": [
+    { "name": "url", "type": "QString", "default": "", "description": "Target URL to open when clicked" },
+    { "name": "launchExternal", "type": "bool", "default": true, "description": "Whether to open URL in external browser" }
+  ],
+  "signals": [
+    { "name": "linkClicked", "params": ["QString"], "description": "Emitted when the label is clicked" }
+  ],
+  "slots": [
+    { "name": "setUrl", "params": ["QString"], "description": "Set the target URL" },
+    { "name": "setLaunchExternal", "params": ["bool"], "description": "Set external launch behavior" }
+  ],
+  "stories": [
+    { "name": "Default", "description": "Label with a URL", "props": { "url": "https://www.freecad.org" } },
+    { "name": "InternalLink", "description": "Label that emits signal instead of opening browser", "props": { "launchExternal": false } },
+    { "name": "Disabled", "description": "Label with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QLabel", "QtGui/QDesktopServices"],
+    "base": []
+  }
+}

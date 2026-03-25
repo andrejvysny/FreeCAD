@@ -1,0 +1,27 @@
+{
+  "name": "FcLabelButton",
+  "displayName": "Label Button",
+  "category": "Inputs",
+  "description": "Composite widget with a label and an action button",
+  "sourceFile": "src/Gui/Widgets.h",
+  "header": "FCComponentLib/Components/Inputs/FcLabelButton.h",
+  "properties": [
+    { "name": "value", "type": "QVariant", "default": null, "description": "Current value displayed in the label" }
+  ],
+  "signals": [
+    { "name": "valueChanged", "params": ["QVariant"], "description": "Emitted when the value changes" },
+    { "name": "buttonClicked", "params": [], "description": "Emitted when the button is clicked" }
+  ],
+  "slots": [
+    { "name": "setValue", "params": ["QVariant"], "description": "Set the displayed value" }
+  ],
+  "stories": [
+    { "name": "Default", "description": "Label button with empty value", "props": {} },
+    { "name": "WithValue", "description": "Label button showing a text value", "props": {} },
+    { "name": "Disabled", "description": "Label button with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QWidget", "QtWidgets/QLabel", "QtWidgets/QPushButton"],
+    "base": []
+  }
+}

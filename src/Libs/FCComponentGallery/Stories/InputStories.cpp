@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2025 FreeCAD Project Association
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QSpinBox>
 
@@ -183,5 +185,148 @@ struct InputStoriesRegistrar
 };
 
 static InputStoriesRegistrar s_inputStories;
+
+
+struct ExtraInputStoriesRegistrar
+{
+    ExtraInputStoriesRegistrar()
+    {
+        // --- FcElideCheckBox stories ---
+        FcGallery::StoryRegistry::instance().registerStories("FcElideCheckBox", {
+            {
+                "Default",
+                "Checkbox with short text",
+                [](QWidget* w) {
+                    auto* cb = qobject_cast<QCheckBox*>(w);
+                    if (!cb) {
+                        return;
+                    }
+                    cb->setText("Enable feature");
+                    cb->setChecked(false);
+                    cb->setEnabled(true);
+                }
+            },
+            {
+                "Long Text",
+                "Checkbox with long text that gets elided",
+                [](QWidget* w) {
+                    auto* cb = qobject_cast<QCheckBox*>(w);
+                    if (!cb) {
+                        return;
+                    }
+                    cb->setText("This is a very long label that should be elided "
+                                "when there is not enough horizontal space");
+                    cb->setChecked(false);
+                    w->setMaximumWidth(200);
+                }
+            },
+            {
+                "Checked",
+                "Checkbox in checked state",
+                [](QWidget* w) {
+                    auto* cb = qobject_cast<QCheckBox*>(w);
+                    if (!cb) {
+                        return;
+                    }
+                    cb->setText("Checked option");
+                    cb->setChecked(true);
+                }
+            },
+        });
+
+        // --- FcAccelLineEdit stories ---
+        FcGallery::StoryRegistry::instance().registerStories("FcAccelLineEdit", {
+            {
+                "Default",
+                "Empty shortcut input",
+                [](QWidget* w) {
+                    auto* kse = qobject_cast<QKeySequenceEdit*>(w);
+                    if (!kse) {
+                        return;
+                    }
+                    kse->clear();
+                    kse->setEnabled(true);
+                }
+            },
+            {
+                "With Shortcut",
+                "Input showing Ctrl+S shortcut",
+                [](QWidget* w) {
+                    auto* kse = qobject_cast<QKeySequenceEdit*>(w);
+                    if (!kse) {
+                        return;
+                    }
+                    kse->setKeySequence(QKeySequence(Qt::CTRL | Qt::Key_S));
+                }
+            },
+            {
+                "Disabled",
+                "Shortcut input with interaction disabled",
+                [](QWidget* w) {
+                    w->setEnabled(false);
+                }
+            },
+        });
+
+        // --- FcClearLineEdit stories ---
+        FcGallery::StoryRegistry::instance().registerStories("FcClearLineEdit", {
+            {
+                "Default",
+                "Empty line edit (clear button hidden)",
+                [](QWidget* w) {
+                    auto* le = qobject_cast<QLineEdit*>(w);
+                    if (!le) {
+                        return;
+                    }
+                    le->clear();
+                    le->setPlaceholderText("Type to see clear button...");
+                    le->setEnabled(true);
+                }
+            },
+            {
+                "With Text",
+                "Line edit with text showing clear button",
+                [](QWidget* w) {
+                    auto* le = qobject_cast<QLineEdit*>(w);
+                    if (!le) {
+                        return;
+                    }
+                    le->setText("Some searchable text");
+                }
+            },
+        });
+
+        // --- FcModifierLineEdit stories ---
+        FcGallery::StoryRegistry::instance().registerStories("FcModifierLineEdit", {
+            {
+                "Default",
+                "Empty modifier input",
+                [](QWidget* w) {
+                    auto* le = qobject_cast<QLineEdit*>(w);
+                    if (!le) {
+                        return;
+                    }
+                    le->clear();
+                    le->setPlaceholderText("Press modifier keys...");
+                    le->setEnabled(true);
+                }
+            },
+        });
+
+        // --- FcImageTextEdit stories ---
+        FcGallery::StoryRegistry::instance().registerStories("FcImageTextEdit", {
+            {
+                "Default",
+                "Empty text editor with image drop support",
+                [](QWidget* w) {
+                    w->setEnabled(true);
+                    w->setMinimumSize(300, 100);
+                }
+            },
+        });
+    }
+};
+
+static ExtraInputStoriesRegistrar s_extraInputStories;
 
 }  // namespace

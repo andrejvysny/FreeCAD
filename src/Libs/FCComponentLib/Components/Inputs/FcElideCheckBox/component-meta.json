@@ -1,0 +1,24 @@
+{
+  "name": "FcElideCheckBox",
+  "displayName": "Elide Check Box",
+  "category": "Inputs",
+  "description": "Checkbox that elides text with ellipsis when space is limited",
+  "sourceFile": "src/Gui/ElideCheckBox.h",
+  "header": "FCComponentLib/Components/Inputs/FcElideCheckBox.h",
+  "properties": [
+    { "name": "text", "type": "QString", "default": "", "description": "Checkbox label text" },
+    { "name": "checked", "type": "bool", "default": false, "description": "Whether the checkbox is checked" }
+  ],
+  "signals": [],
+  "slots": [],
+  "stories": [
+    { "name": "Default", "description": "Checkbox with short text", "props": {} },
+    { "name": "LongText", "description": "Checkbox with long text that gets elided", "props": { "text": "This is a very long checkbox label that should be elided" } },
+    { "name": "Checked", "description": "Checkbox in checked state", "props": { "checked": true } },
+    { "name": "Disabled", "description": "Checkbox with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QCheckBox"],
+    "base": []
+  }
+}

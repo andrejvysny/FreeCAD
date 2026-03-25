@@ -1,0 +1,18 @@
+{
+  "name": "FcButtonGroup",
+  "displayName": "Button Group",
+  "category": "Buttons",
+  "description": "Button group that allows deselection in exclusive mode",
+  "sourceFile": "src/Gui/Widgets.h",
+  "header": "FCComponentLib/Components/Buttons/FcButtonGroup.h",
+  "properties": [
+    { "name": "exclusive", "type": "bool", "default": false, "description": "Whether the group enforces exclusive selection with deselection support" }
+  ],
+  "signals": [],
+  "slots": [],
+  "stories": [],
+  "dependencies": {
+    "qt": ["QtWidgets/QButtonGroup"],
+    "base": []
+  }
+}

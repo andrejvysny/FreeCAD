@@ -1,0 +1,19 @@
+{
+  "name": "FcModifierLineEdit",
+  "displayName": "Modifier Line Edit",
+  "category": "Inputs",
+  "description": "Input field for capturing keyboard modifiers (Ctrl, Shift, Alt, Meta)",
+  "sourceFile": "src/Gui/Widgets.h",
+  "header": "FCComponentLib/Components/Inputs/FcModifierLineEdit.h",
+  "properties": [],
+  "signals": [],
+  "slots": [],
+  "stories": [
+    { "name": "Default", "description": "Empty modifier input", "props": {} },
+    { "name": "Disabled", "description": "Modifier input with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QLineEdit"],
+    "base": []
+  }
+}

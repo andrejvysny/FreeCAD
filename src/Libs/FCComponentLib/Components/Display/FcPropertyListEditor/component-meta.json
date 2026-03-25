@@ -1,0 +1,20 @@
+{
+  "name": "FcPropertyListEditor",
+  "displayName": "Property List Editor",
+  "category": "Display",
+  "description": "Plain text editor with line number margin",
+  "sourceFile": "src/Gui/Widgets.h",
+  "header": "FCComponentLib/Components/Display/FcPropertyListEditor.h",
+  "properties": [],
+  "signals": [],
+  "slots": [],
+  "stories": [
+    { "name": "Default", "description": "Empty editor with line numbers", "props": {} },
+    { "name": "WithContent", "description": "Editor with sample content", "props": {} },
+    { "name": "Disabled", "description": "Editor with interaction disabled", "props": { "enabled": false } }
+  ],
+  "dependencies": {
+    "qt": ["QtWidgets/QPlainTextEdit", "QtWidgets/QWidget"],
+    "base": []
+  }
+}

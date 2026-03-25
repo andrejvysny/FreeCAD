@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2025 FreeCAD Project Association
 
+#include <QMenu>
 #include <QPushButton>
 #include <QStyle>
+#include <QToolButton>
 
 #include "StoryRegistry.h"
 
@@ -72,5 +74,56 @@ struct ButtonStoriesRegistrar
 };
 
 static ButtonStoriesRegistrar s_buttonStories;
+
+
+struct SplitButtonStoriesRegistrar
+{
+    SplitButtonStoriesRegistrar()
+    {
+        FcGallery::StoryRegistry::instance().registerStories("FcSplitButton", {
+            {
+                "Default",
+                "Split button with text label",
+                [](QWidget* w) {
+                    auto* btn = w->findChild<QPushButton*>();
+                    if (btn) {
+                        btn->setText("Save");
+                    }
+                    w->setEnabled(true);
+                }
+            },
+            {
+                "With Actions",
+                "Split button with populated menu",
+                [](QWidget* w) {
+                    auto* btn = w->findChild<QPushButton*>();
+                    if (btn) {
+                        btn->setText("Export");
+                    }
+                    auto* menu = w->findChild<QMenu*>();
+                    if (menu) {
+                        menu->clear();
+                        menu->addAction("Export as PDF");
+                        menu->addAction("Export as SVG");
+                        menu->addAction("Export as PNG");
+                    }
+                }
+            },
+            {
+                "Disabled",
+                "Split button with interaction disabled",
+                [](QWidget* w) {
+                    auto* btn = w->findChild<QPushButton*>();
+                    if (btn) {
+                        btn->setText("Disabled");
+                    }
+                    w->setEnabled(false);
+                }
+            },
+        });
+    }
+};
+
+static SplitButtonStoriesRegistrar s_splitButtonStories;
 
 }  // namespace
