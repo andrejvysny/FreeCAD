@@ -11,6 +11,7 @@
         <file>background.png</file>
         <file>bound-expression-unset.svg</file>
         <file>bound-expression.svg</file>
+        <file>bound-expression-symbol.svg</file>
         <file>breakpoint.svg</file>
         <file>bulb.svg</file>
         <file>button_add_all.svg</file>
@@ -323,6 +324,12 @@
         <file>zoom-in.svg</file>
         <file>zoom-out.svg</file>
         <file>zoom-selection.svg</file>
+        <file>tabler/outline/package-import.svg</file>
+        <file>tabler/outline/adjustments-check.svg</file>
+        <file>tabler/outline/settings.svg</file>
+        <file>tabler/outline/adjustments.svg</file>
+        <file>tabler/outline/eye.svg</file>
+        <file>tabler/outline/refresh.svg</file>
     </qresource>
     <qresource prefix="/icons/FreeCAD-default">
         <file>index.theme</file>
@@ -356,6 +363,7 @@
         <file>utilities-terminal.svg</file>
         <file>bound-expression.svg</file>
         <file>bound-expression-unset.svg</file>
+        <file>bound-expression-symbol.svg</file>
         <file>breakpoint.svg</file>
         <file>debug-marker.svg</file>
         <file>debug-start.svg</file>

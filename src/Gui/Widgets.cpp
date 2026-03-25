@@ -1560,7 +1560,7 @@ ExpLineEdit::ExpLineEdit(QWidget* parent, bool expressionOnly)
 {
     makeLabel(this);
 
-    QObject::connect(iconLabel, &ExpressionLabel::clicked, this, &ExpLineEdit::openFormulaDialog);
+    QObject::connect(iconLabel, &QAbstractButton::clicked, this, &ExpLineEdit::openFormulaDialog);
     if (expressionOnly) {
         QMetaObject::invokeMethod(
             this,
@@ -1632,7 +1632,8 @@ void ExpLineEdit::onChange()
             setText(QString::fromUtf8(result->toString().c_str()));
         }
         setReadOnly(true);
-        iconLabel->setPixmap(getIcon(":/icons/bound-expression.svg", QSize(iconHeight, iconHeight)));
+        iconLabel->restoreNormalIcon();
+        iconLabel->setChecked(true);
 
         QPalette p(palette());
         p.setColor(QPalette::Text, Qt::lightGray);
@@ -1641,9 +1642,9 @@ void ExpLineEdit::onChange()
     }
     else {
         setReadOnly(false);
-        iconLabel->setPixmap(
-            getIcon(":/icons/bound-expression-unset.svg", QSize(iconHeight, iconHeight))
-        );
+        iconLabel->restoreNormalIcon();
+        iconLabel->setChecked(false);
+
         QPalette p(palette());
         p.setColor(QPalette::Active, QPalette::Text, defaultPalette.color(QPalette::Text));
         setPalette(p);
@@ -1663,8 +1664,8 @@ void ExpLineEdit::resizeEvent(QResizeEvent* event)
     try {
         if (isBound() && getExpression()) {
             setReadOnly(true);
-            QPixmap pixmap = getIcon(":/icons/bound-expression.svg", QSize(iconHeight, iconHeight));
-            iconLabel->setPixmap(pixmap);
+            iconLabel->restoreNormalIcon();
+            iconLabel->setChecked(true);
 
             QPalette p(palette());
             p.setColor(QPalette::Text, Qt::lightGray);
@@ -1673,9 +1674,8 @@ void ExpLineEdit::resizeEvent(QResizeEvent* event)
         }
         else {
             setReadOnly(false);
-            QPixmap pixmap
-                = getIcon(":/icons/bound-expression-unset.svg", QSize(iconHeight, iconHeight));
-            iconLabel->setPixmap(pixmap);
+            iconLabel->restoreNormalIcon();
+            iconLabel->setChecked(false);
 
             QPalette p(palette());
             p.setColor(QPalette::Active, QPalette::Text, defaultPalette.color(QPalette::Text));

@@ -54,7 +54,7 @@ Numeric Numeric::operator/(const Numeric& rhs) const
     }
 
     if (rhs.unit.empty() || unit.empty()) {
-        return {value / rhs.value, unit};
+        return {value / rhs.value, unit.empty() ? rhs.unit : unit};
     }
 
     ensureEqualUnits(rhs);
@@ -64,7 +64,7 @@ Numeric Numeric::operator/(const Numeric& rhs) const
 Numeric Numeric::operator*(const Numeric& rhs) const
 {
     if (rhs.unit.empty() || unit.empty()) {
-        return {value * rhs.value, unit};
+        return {value * rhs.value, unit.empty() ? rhs.unit : unit};
     }
 
     ensureEqualUnits(rhs);
@@ -90,6 +90,18 @@ std::string Value::toString() const
 
     if (holds<Base::Color>()) {
         auto color = get<Base::Color>();
+
+        // special case for alpha handling
+        if (color.a < 1.0) {
+            return fmt::format(
+                "rgba({}, {}, {}, {})",
+                static_cast<int>(color.r * 255),
+                static_cast<int>(color.g * 255),
+                static_cast<int>(color.b * 255),
+                static_cast<int>(color.a * 255)
+            );
+        }
+
         return fmt::format("#{:0>6x}", color.getPackedRGB() >> 8);  // NOLINT(*-magic-numbers)
     }
 
@@ -115,15 +127,34 @@ std::string Value::toString() const
         return fmt::format("({})", fmt::join(parts, ", "));
     }
 
+    if (holds<None>()) {
+        return "reset()";
+    }
+
     return get<std::string>();
 }
 
 namespace
 {
 
+TupleKind resolveKind(TupleKind lhs, TupleKind rhs)
+{
+    if (lhs == rhs || rhs == TupleKind::Generic) {
+        return lhs;
+    }
+    if (lhs == TupleKind::Generic) {
+        return rhs;
+    }
+    THROWM(
+        Base::ExpressionError,
+        fmt::format("Cannot combine {} and {} tuples", tupleKindName(lhs), tupleKindName(rhs))
+    );
+}
+
 Tuple elementWise(const Tuple& lhs, const Tuple& rhs, auto op)
 {
     Tuple result;
+    result.kind = resolveKind(lhs.kind, rhs.kind);
     std::vector<bool> rhsUsed(rhs.size(), false);
 
     // Phase 1: LHS named elements — match by name in RHS
@@ -196,6 +227,7 @@ Tuple elementWise(const Tuple& lhs, const Tuple& rhs, auto op)
 Tuple scalarBroadcast(const Tuple& tuple, const Value& scalar, auto op)
 {
     Tuple result;
+    result.kind = tuple.kind;
     for (size_t i = 0; i < tuple.size(); ++i) {
         result.elements.emplace_back(
             tuple.elements[i].name,
@@ -264,6 +296,7 @@ Value Value::operator-() const
     if (holds<Tuple>()) {
         Tuple result;
         const auto& tuple = get<Tuple>();
+        result.kind = tuple.kind;
         for (size_t i = 0; i < tuple.size(); ++i) {
             result.elements.emplace_back(
                 tuple.elements[i].name,
@@ -299,6 +332,25 @@ size_t Tuple::size() const
 {
     return elements.size();
 }
+
+Tuple::Element Tuple::Element::named(std::string name, Value val)
+{
+    return {.name = std::move(name), .value = std::make_shared<const Value>(std::move(val))};
+}
+
+Tuple::Element Tuple::Element::unnamed(Value val)
+{
+    return {.name = std::nullopt, .value = std::make_shared<const Value>(std::move(val))};
+}
+
+Tuple::Tuple(std::initializer_list<Element> elements)
+    : elements(elements)
+{}
+
+Tuple::Tuple(std::initializer_list<Element> elements, TupleKind kind)
+    : kind(kind)
+    , elements(elements)
+{}
 
 ArgumentParser::ArgumentParser(std::initializer_list<ParamDef> params)
     : params_(params)

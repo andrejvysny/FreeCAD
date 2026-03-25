@@ -1,0 +1,322 @@
+---
+BaseShades:
+  050: 0.05
+  100: 0.10
+  200: 0.20
+  300: 0.30
+  400: 0.40
+  500: 0.50
+  600: 0.60
+  700: 0.70
+  800: 0.80
+  900: 0.90
+
+BaseRadius:
+  small: 2px
+  medium: 3px
+  large: 4px
+
+BaseSpacing: 4px
+SpacingFactors:
+  000: 0.0
+  050: 0.5
+  100: 1.0
+  150: 1.5
+  200: 2.0
+  250: 2.5
+  300: 3.0
+  400: 4.0
+  500: 5.0
+  600: 6.0
+  800: 8.0
+  1000: 10.0
+  1200: 12.0
+  1600: 16.0
+
+Spacing: "@BaseSpacing * @SpacingFactors"
+
+BaseNeutral: "#adb5bd"
+BaseContrast: "#495057"
+
+Neutral: "shades(@BaseNeutral, (000: 0.00, 150: 0.15) + @BaseShades, range: 0.6, max: 1.0, q: 1.0)"
+Contrast: "shades(@BaseContrast, @BaseShades, range: 0.6, q: 1.0)"
+
+Blue: "shades(#418fde, @BaseShades)"
+Orange: "shades(#ff922b, @BaseShades)"
+Accent: "shades(@ThemeAccentColor1, @BaseShades)"
+
+Background:
+  000: "@Neutral.000"
+  050: "@Neutral.050"
+  100: "@Neutral.100"
+  150: "@Neutral.150"
+  200: "@Neutral.200"
+
+BaseTextColor: "@Contrast.900"
+
+# ── Semantic surface tokens (drive QPalette) ─────────────────────────────────
+# Window / panel backgrounds
+BaseWindowBackground: "@Background.050"
+BaseAlternateBackground: "@Background.100"
+BaseInputBackground: "@Background.000"
+
+# Selection
+BaseHighlightBackground: "@Accent.500"
+BaseHighlightTextColor: "@Neutral.000"
+
+# Disabled
+BaseDisabledTextColor: "@Contrast.300"
+BaseDisabledBackground: "@Neutral.200"
+
+# Placeholder text in inputs
+BasePlaceholderTextColor: "@Contrast.400"
+
+# Links / URLs
+BaseLinkColor: "@Accent.600"
+
+# Tooltips
+BaseTooltipBackground: "@Background.100"
+BaseTooltipTextColor: "@BaseTextColor"
+
+# 3D shading (QPalette Light / Midlight / Mid / Dark / Shadow)
+BaseShadingLight: "@Neutral.100"
+BaseShadingMidlight: "@Neutral.200"
+BaseShadingMid: "@Neutral.400"
+BaseShadingDark: "@Neutral.600"
+BaseShadingShadow: "@Neutral.800"
+
+BaseBorderColor: "@Neutral.400"
+BaseShadowColor: "rgba(0, 0, 0, 0.08)"
+
+BaseHoveredOverlay: "#ffffff"
+BaseHoveredOverlayOpacity: 50%
+
+BasePressedOverlay: "@Contrast.800"
+BasePressedOverlayOpacity: 10%
+BaseHalfPressedOverlayOpacity: 7%
+
+FormControlSmallHeight: 24px
+FormControlHeight: 28px
+FormControlBigHeight: 32px
+
+FormControlIconSpacing: "@Spacing.150"
+
+FormControlPadding: "padding(horizontal: @Spacing.150, vertical: @Spacing.100)"
+FormControlBorderThickness: 1px
+FormControlBorderRadius: "@BaseRadius.medium"
+FormControlBorderColor: "@BaseBorderColor"
+FormControlTextColor: "@BaseTextColor"
+
+ButtonBackground: "linear_gradient(x1: 0, y1: 0, x2: 0, y2: 1, @Background.100, @Background.200)"
+ButtonMinWidth: 100px
+ButtonHeight: "@FormControlHeight"
+ButtonPadding: "padding(horizontal: @Spacing.300, vertical: @Spacing.100)"
+ButtonIconSpacing: "@FormControlIconSpacing"
+ButtonIconSize: 16px
+ButtonFontSize: 12px
+ButtonFontWeight: 500
+ButtonContentBox: "content_box((width: @ButtonMinWidth, height: @ButtonHeight), @ButtonPadding, @ButtonBorderThickness)"
+
+ButtonSmallFontSize: 11px
+ButtonSmallFontWeight: 500
+
+ButtonFocusedBorderColor: "@Accent.600"
+ButtonPrimaryFocusedBorderColor: "@Accent.600"
+
+ButtonSpacing: "@Spacing.250"
+
+ButtonTextColor: "@BaseTextColor"
+ButtonBorderColor: "@BaseBorderColor"
+
+ButtonHoveredOverlay: "opacity(@BaseHoveredOverlay, @BaseHoveredOverlayOpacity)"
+
+ButtonPressedOverlay: "opacity(@BasePressedOverlay, @BasePressedOverlayOpacity)"
+ButtonPressedInnerShadow: "inner_shadow(color: rgba(0, 0, 0, 50), y: 2px, blur: 6px)"
+
+ButtonCheckedOverlay: "opacity(@BasePressedOverlay, @BaseHalfPressedOverlayOpacity)"
+ButtonCheckedInnerShadow: "inner_shadow(color: rgba(0, 0, 0, 50), y: 2px, blur: 6px)"
+
+ButtonDisabledBackground: "@BaseDisabledBackground"
+ButtonDisabledTextColor: "@BaseDisabledTextColor"
+ButtonDisabledBorderColor: "@BaseBorderColor"
+
+ButtonPrimaryBackground: "blend(@ButtonBackground, @Accent.500, 15%)"
+ButtonPrimaryBorderColor: "blend(@ButtonBorderColor, @Accent.500, 25%)"
+
+ButtonLinkBackground: transparent
+ButtonLinkBorderColor: transparent
+
+ButtonLinkHoveredBackground: "@Background.100"
+ButtonLinkHoveredBorderColor: "@BaseBorderColor"
+
+ButtonLinkPressedBackground: "@Background.200"
+ButtonLinkPressedBorderColor: "@BaseBorderColor"
+ButtonLinkPressedInnerShadow: "@ButtonPressedInnerShadow"
+
+ButtonLinkCheckedBackground: "@Background.150"
+ButtonLinkCheckedBorderColor: "@BaseBorderColor"
+ButtonLinkCheckedInnerShadow: "@ButtonCheckedInnerShadow"
+
+ToolButtonPadding: "padding(@Spacing.150)"
+ToolButtonSmallPadding: "padding(@Spacing.100)"
+
+ToolButtonMinWidth: "@ButtonHeight"
+ToolButtonSmallMinWidth: "@ButtonSmallHeight"
+
+ToolButtonSmallHeight: "@FormControlSmallHeight"
+ToolButtonBigHeight: "@FormControlBigHeight"
+
+# ── ToolButton – Link variant (auto-raise / toolbar buttons) ──────────────────
+# These tokens define the visual appearance of QToolButton with autoRaise=true,
+# which covers all standard toolbar buttons. The padding is uniform so that
+# icon-only buttons are naturally square: size = iconSize + 2 * padding.
+
+ToolButtonLinkPadding: "@Spacing.100"
+ToolButtonMenuWidth: 14px
+
+ToolBarItemSpacing: "@Spacing.100"
+ToolBarItemMargin: "@Spacing.100"
+
+ToolBarButtonHeight: "reset()" # Do not enforce height for toolbar buttons
+
+# ── Select Padding overrides
+SelectPadding: "padding(horizontal: @Spacing.200, vertical: @Spacing.100)"
+SelectSmallPadding: "@FormControlSmallPadding"
+SelectBigPadding: "@FormControlBigPadding"
+
+# ── Line Edit / Input fields ──────────────────────────────────────────────
+LineEditBackground: "@Background.000"
+LineEditBorderColor: "@FormControlBorderColor"
+LineEditBorderRadius: "@FormControlBorderRadius"
+LineEditBorderThickness: "@FormControlBorderThickness"
+LineEditPadding: "@FormControlPadding"
+LineEditHeight: "@FormControlHeight"
+LineEditSmallHeight: "@FormControlSmallHeight"
+
+LineEditFocusedBorderColor: "@Accent.500"
+LineEditHoveredBorderOverlay: "opacity(@Contrast.700, 20%)"
+
+LineEditDisabledBackground: "@BaseDisabledBackground"
+LineEditDisabledTextColor: "@BaseDisabledTextColor"
+
+# ── ComboBox / Editable combo fields ─────────────────────────────────────
+# Editable QComboBox uses the chain: ComboBox → LineEdit → FormControl.
+# Add ComboBox* overrides here when the editable combo needs to differ from LineEdit.
+
+InputBackground: "@Background.000"
+
+TextEditPadding: "padding(@FormControlPadding.left)"
+
+DialogBackground: "@Background.050"
+
+GroupBoxBackground: "@Background.050"
+GroupBoxBorderColor: "@Neutral.300"
+GroupBoxBorderRadius: "@BaseRadius.medium"
+GroupBoxPadding: "padding(@Spacing.300, top: @Spacing.400)"
+
+GroupBoxTitlePadding: "padding(horizontal: @Spacing.150, vertical: 0)"
+GroupBoxTitleFontSize: 10px
+GroupBoxTitleFontWeight: 600
+GroupBoxTitleTextColor: "@Contrast.500"
+
+SeparatorThickness: 1px
+SeparatorColor: "@BaseBorderColor"
+
+CheckBoxWidth: 14px
+CheckBoxHeight: "@CheckBoxWidth"
+CheckBoxSpacing: "@Spacing.150"
+
+CheckBoxSmallWidth: 12px
+CheckBoxSmallHeight: "@CheckBoxSmallWidth"
+
+# Indicator box appearance
+CheckBoxBackground: "@Background.000"
+CheckBoxBorderRadius: "@BaseRadius.medium"
+CheckBoxPadding: "padding(@Spacing.100)"
+CheckBoxTickColor: "@BaseTextColor"
+
+
+# State overrides
+CheckBoxFocusedBorderColor: "@Accent.500"
+CheckBoxHoveredBorderOverlay: "@LineEditHoveredBorderOverlay"
+
+CheckBoxDisabledBackground: "@BaseDisabledBackground"
+CheckBoxDisabledTickColor: "@BaseDisabledTextColor"
+
+CheckBoxPressedInnerShadow: "inner_shadow(color: rgba(0, 0, 0, 50), y: 1px, blur: 4px)"
+
+# ── Radio Button indicator ────────────────────────────────────────────────
+# Inherits all visual properties from CheckBox; only border radius is overridden
+# to produce a circular indicator.
+RadioButtonBorderRadius: "border_radius(100px)"
+
+# ── Scroll Bar ───────────────────────────────────────────────────────────
+ScrollBarBackground: transparent
+ScrollBarHoveredBackground: "opacity(@BaseBorderColor, 0.1)"
+
+ScrollBarThumbBackground: "@Neutral.400"
+ScrollBarThumbHoveredBackground: "@Neutral.600"
+ScrollBarThumbBorderRadius: "@BaseRadius.medium"
+ScrollBarThumbMargin: "padding(@Spacing.100)"
+ScrollBarThumbMinLength: 50px
+
+# ── List Item ──────────────────────────────────────────────────────────────
+ListItemPadding: "padding(horizontal: @Spacing.150, vertical: @Spacing.100)"
+ListItemIconSpacing: "@Spacing.150"
+
+# ── Dropdown List (QComboBox popup) ────────────────────────────────────────
+DropdownListMaxHeight: "250px"
+
+# ── Tree Item ──────────────────────────────────────────────────────────────
+TreeItemPadding: "padding(horizontal: @Spacing.150, vertical: @Spacing.100)"
+
+DocumentTreeItemPadding: "padding(0)"
+
+# ── Tab Bar ─────────────────────────────────────────────────────────────────
+# TabPosition = North is canonical (default). Geometric tokens (BorderRadius,
+# BorderThickness) are auto-rotated to South/East/West; theme authors only need
+# to define North. Per-position colour overrides: TabBarTabSouthBackground etc.
+
+TabBarTabCheckedBackground: "@Background.100"
+
+TabBarTabBorderRadius: "border_radius(0px, top: @BaseRadius.medium)"
+TabBarTabHoveredBorderColor: "@BaseBorderColor"
+TabBarTabBorderThickness: "border_thickness(1px, bottom: 0)"
+
+# Spacing between adjacent tabs (gap semantics: positive = gap, negative = overlap).
+# Default -1px produces 1px overlap so adjacent tab borders merge into one.
+# Set to e.g. 4px for a spaced-apart appearance.
+TabBarTabSpacing: -1px
+
+TabBarTabPadding: "padding(vertical: @Spacing.150, horizontal: @Spacing.300)"
+TabBarTabIconSpacing: "@Spacing.150"
+
+TabBarTabCheckedBorderColor: "@BaseBorderColor"
+TabBarTabDisabledBackground: "@BaseDisabledBackground"
+TabBarTabDisabledTextColor: "@BaseDisabledTextColor"
+
+# ── Tab Bar Base ─────────────────────────────────────────────────────────────
+# TabBarBaseHeight:  visible strip height below the tabs (PM_TabBarBaseHeight - PM_TabBarBaseOverlap).
+# TabBarBaseOverlap: how many px the strip extends under the tab row (PM_TabBarBaseOverlap).
+# Qt sizes the PE_FrameTabBarBase rect to Height + Overlap, then hides the overlap portion
+# under the tabs, leaving exactly TabBarBaseHeight px visible.
+TabBarBaseHeight: 4px
+TabBarBaseOverlap: 4px
+TabBarBaseBorderColor: "@BaseBorderColor"
+TabBarBaseBorderThickness: "border_thickness(0px, bottom: 1px)"
+TabBarBaseBackground: "linear_gradient(x1: 0, y1: 0, x2: 0, y2: 1, opacity(@BaseBorderColor, 0%), opacity(@BaseBorderColor, 40%))"
+
+# ── Tab Widget Pane ──────────────────────────────────────────────────────────
+TabWidgetBackground: "@Background.100"
+TabWidgetBorderColor: "@BaseBorderColor"
+TabWidgetBorderRadius: "border_radius(@BaseRadius.medium)"
+TabWidgetBorderThickness: "border_thickness(1px)"
+TabWidgetPadding: 0
+
+ExpressionButtonBackground: "@ButtonBackground"
+ExpressionButtonBorderColor: "@ButtonBorderColor"
+
+ExpressionButtonCheckedBackground: "linear_gradient(x1: 0, y1: 0, x2: 0, y2: 1, @Accent.700, @Accent.800)"
+ExpressionButtonCheckedBorderColor: "@Accent.900"
+ExpressionButtonCheckedIconColor: "@Background.050"
+ExpressionButtonPadding: "0px"

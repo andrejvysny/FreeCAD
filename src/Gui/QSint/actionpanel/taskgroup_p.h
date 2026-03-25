@@ -21,6 +21,7 @@ namespace QSint
 
 class TaskGroup : public QFrame
 {
+  Q_OBJECT
   using BaseClass = QFrame;
 
 public:

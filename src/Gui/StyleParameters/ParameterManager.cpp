@@ -27,6 +27,7 @@
 #include <QFile>
 #include <fstream>
 #include <yaml-cpp/yaml.h>
+#include <fmt/ranges.h>
 
 #include <QRegularExpression>
 #include <QString>
@@ -40,6 +41,104 @@ FC_LOG_LEVEL_INIT("Gui", true, true)
 
 namespace Gui::StyleParameters
 {
+
+namespace
+{
+
+/// Converts a YAML node to a StyleParameters expression string.
+/// Scalars are returned as-is; sequences become unnamed tuples "(a, b, ...)";
+/// maps become named tuples "(key1: val1, key2: val2, ...)". Recursive.
+std::string yamlNodeToExpression(const YAML::Node& node)
+{
+    if (node.IsScalar()) {
+        return node.as<std::string>();
+    }
+
+    if (node.IsSequence()) {
+        std::vector<std::string> parts;
+        parts.reserve(node.size());
+        for (const auto& element : node) {
+            parts.push_back(yamlNodeToExpression(element));
+        }
+        return fmt::format("({})", fmt::join(parts, ", "));
+    }
+
+    if (node.IsMap()) {
+        std::vector<std::string> parts;
+        parts.reserve(node.size());
+        for (auto it = node.begin(); it != node.end(); ++it) {
+            parts.push_back(
+                fmt::format("{}: {}", it->first.as<std::string>(), yamlNodeToExpression(it->second))
+            );
+        }
+        return fmt::format("({})", fmt::join(parts, ", "));
+    }
+
+    return "";
+}
+
+/// Formats a gradient tuple as QSS qlineargradient() or qradialgradient().
+std::string gradientToQss(const Tuple& tuple, const auto& formatValue)
+{
+    const char* functionName = tuple.kind == TupleKind::LinearGradient ? "qlineargradient"
+                                                                       : "qradialgradient";
+
+    std::vector<std::string> parts;
+
+    // Geometry params (all named elements except "stops")
+    for (const auto& [name, value] : tuple.elements) {
+        if (!name || *name == "stops") {
+            continue;
+        }
+        parts.push_back(fmt::format("{}:{}", *name, formatValue(*value)));
+    }
+
+    // Stops
+    const auto* stopsValue = tuple.find("stops");
+    if (stopsValue && stopsValue->holds<Tuple>()) {
+        const auto& stopsTuple = stopsValue->get<Tuple>();
+        for (size_t index = 0; index < stopsTuple.size(); ++index) {
+            const auto& stopEntry = stopsTuple.at(index).get<Tuple>();
+            parts.push_back(
+                fmt::format("stop:{} {}", formatValue(stopEntry.at(0)), formatValue(stopEntry.at(1)))
+            );
+        }
+    }
+
+    return fmt::format("{}({})", functionName, fmt::join(parts, ", "));
+}
+
+/// Formats a Value for QSS output.
+/// Gradient tuples use qlineargradient()/qradialgradient() syntax.
+/// Other tuples become space-separated values (e.g. "10px 5px 10px 5px").
+/// All other types delegate to toString().
+std::string toQss(const Value& value)
+{
+    if (value.holds<None>()) {
+        return "";
+    }
+
+    if (value.holds<Tuple>()) {
+        const auto& tuple = value.get<Tuple>();
+
+        if (tuple.kind == TupleKind::LinearGradient || tuple.kind == TupleKind::RadialGradient) {
+            return gradientToQss(tuple, [](const Value& val) { return toQss(val); });
+        }
+
+        std::vector<std::string> parts;
+        parts.reserve(tuple.elements.size());
+
+        for (const auto& [name, elem] : tuple.elements) {
+            parts.push_back(toQss(*elem));
+        }
+
+        return fmt::format("{}", fmt::join(parts, " "));
+    }
+
+    return value.toString();
+}
+
+}  // namespace
 
 ParameterSource::ParameterSource(const Metadata& metadata)
     : metadata(metadata)
@@ -185,8 +284,8 @@ void YamlParameterSource::reload()
     YAML::Node root = YAML::Load(content);
     parameters.clear();
     for (auto it = root.begin(); it != root.end(); ++it) {
-        auto key = it->first.as<std::string>();
-        auto value = it->second.as<std::string>();
+        const auto key = it->first.as<std::string>();
+        const auto value = yamlNodeToExpression(it->second);
 
         parameters[key] = Parameter {
             .name = key,
@@ -252,7 +351,8 @@ std::string ParameterManager::replacePlaceholders(
     ResolveContext context
 ) const
 {
-    static const QRegularExpression regex(QStringLiteral("@(\\w+)"));
+    // Matches @TokenName (group 1) or @{expression} (group 2)
+    static const QRegularExpression regex(QStringLiteral("@(?:(\\w+)|\\{([^}]*)\\})"));
 
     auto substituteWithCallback =
         [](const QRegularExpression& regex,
@@ -285,17 +385,35 @@ std::string ParameterManager::replacePlaceholders(
     return substituteWithCallback(
         regex,
         QString::fromStdString(expression),
-        [&](const QRegularExpressionMatch& match) {
-            auto tokenName = match.captured(1).toStdString();
-            auto tokenValue = resolve(tokenName, context);
+        [&](const QRegularExpressionMatch& match) -> QString {
+            // Group 1: @TokenName
+            if (!match.captured(1).isEmpty()) {
+                auto tokenName = match.captured(1).toStdString();
+                auto tokenValue = resolve(tokenName, context);
 
-            if (!tokenValue) {
-                Base::Console().warning("Requested non-existent style parameter token '%s'.\n", tokenName);
-                return QStringLiteral("");
+                if (!tokenValue) {
+                    Base::Console().warning("Requested non-existent style parameter token '%s'.\n", tokenName);
+                    return QStringLiteral("");
+                }
+
+                context.visited.erase(tokenName);
+                return QString::fromStdString(toQss(*tokenValue));
             }
 
-            context.visited.erase(tokenName);
-            return QString::fromStdString(tokenValue->toString());
+            // Group 2: @{expression}
+            auto exprBody = match.captured(2).toStdString();
+            try {
+                Value result = evaluate(exprBody, context);
+                return QString::fromStdString(toQss(result));
+            }
+            catch (Base::Exception& e) {
+                Base::Console().warning(
+                    "Failed to evaluate inline expression '@{%s}': %s\n",
+                    exprBody,
+                    e.what()
+                );
+                return QStringLiteral("");
+            }
     }
     ).toStdString();
     // clang-format on

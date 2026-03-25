@@ -30,6 +30,7 @@
 #include <type_traits>
 #include <variant>
 #include <vector>
+#include <cassert>
 
 #include <fmt/format.h>
 
@@ -90,13 +91,96 @@ struct GuiExport Numeric
     Numeric operator*(const Numeric& rhs) const;
     /// @}
 
+    /**
+     * @name Conversion operators
+     *
+     * Explicit conversions to common numeric types. These allow the use of static_cast<T>
+     * to extract the raw value when the unit has already been accounted for.
+     * @{
+     */
+    explicit operator double() const
+    {
+        return value;
+    }
+    explicit operator float() const
+    {
+        return static_cast<float>(value);
+    }
+    explicit operator int() const
+    {
+        return static_cast<int>(value);
+    }
+    explicit operator long() const
+    {
+        return static_cast<long>(value);
+    }
+    /// @}
+
 private:
     void ensureEqualUnits(const Numeric& rhs) const;
+};
+
+/**
+ * @brief Represents an explicitly-reset (absent) parameter value.
+ *
+ * When a token is defined as `reset()` in a higher-priority source, the resolved
+ * value carries `None` as its type. `ParameterManager::resolve()` converts this
+ * back to `std::nullopt`, effectively removing any inherited value from lower-priority
+ * sources — even though a definition exists in the higher-priority source.
+ *
+ * This allows a theme override or component override to explicitly unset an optional
+ * token that would otherwise fall back to a parent value.
+ */
+struct GuiExport None
+{
+    bool operator==(const None&) const = default;
 };
 
 // Forward declaration: Tuple::Element uses shared_ptr<const Value> to break the
 // circular dependency (Value contains Tuple, Tuple elements contain Value).
 struct Value;
+
+/**
+ * @brief Identifies the semantic kind of a tuple.
+ *
+ * Generic tuples have no special meaning. Typed kinds (Padding, Margins, BorderThickness)
+ * carry structural identity: they are always 4-element (top, right, bottom, left) insets
+ * created via CSS-like shorthand functions.
+ */
+enum class TupleKind : std::uint8_t
+{
+    Generic,
+    Padding,
+    Margins,
+    BorderThickness,
+    Corners,
+    LinearGradient,
+    RadialGradient,
+    InnerShadow,
+};
+
+constexpr const char* tupleKindName(TupleKind kind)
+{
+    switch (kind) {
+        case TupleKind::Generic:
+            return "Generic";
+        case TupleKind::Padding:
+            return "Padding";
+        case TupleKind::Margins:
+            return "Margins";
+        case TupleKind::BorderThickness:
+            return "BorderThickness";
+        case TupleKind::Corners:
+            return "Corners";
+        case TupleKind::LinearGradient:
+            return "LinearGradient";
+        case TupleKind::RadialGradient:
+            return "RadialGradient";
+        case TupleKind::InnerShadow:
+            return "InnerShadow";
+    }
+    return "<unknown>";
+}
 
 /**
  * @brief Represents a tuple of named or unnamed values.
@@ -110,8 +194,19 @@ struct GuiExport Tuple
     {
         std::optional<std::string> name;
         std::shared_ptr<const Value> value;
+
+        /// Creates a named element, wrapping val in a shared_ptr.
+        static Element named(std::string name, Value val);
+
+        /// Creates an unnamed element, wrapping val in a shared_ptr.
+        static Element unnamed(Value val);
     };
 
+    Tuple() = default;
+    Tuple(std::initializer_list<Element> elements);
+    Tuple(std::initializer_list<Element> elements, TupleKind kind);
+
+    TupleKind kind = TupleKind::Generic;
     std::vector<Element> elements;
 
     /**
@@ -151,14 +246,14 @@ struct GuiExport Tuple
  *
  * As a rule, operations can be only performed over values of the same type.
  */
-struct GuiExport Value: std::variant<Numeric, Base::Color, std::string, Tuple>
+struct GuiExport Value: std::variant<Numeric, Base::Color, std::string, Tuple, None>
 {
-    using std::variant<Numeric, Base::Color, std::string, Tuple>::variant;
+    using std::variant<Numeric, Base::Color, std::string, Tuple, None>::variant;
 
     /**
      * Converts the object into its string representation.
      *
-     * @return A string representation of the object that can later be used in QSS.
+     * @return A human-readable string representation of the object (debug/display format).
      */
     std::string toString() const;
 
@@ -179,7 +274,13 @@ struct GuiExport Value: std::variant<Numeric, Base::Color, std::string, Tuple>
     template<typename T>
     const T& get() const
     {
-        return std::get<T>(*this);
+        try {
+            return std::get<T>(*this);
+        }
+        catch (...) {
+            assert(false && "This should never happen, probably missing holds<T> check.");
+            throw;
+        }
     }
 
     /**
@@ -212,6 +313,9 @@ constexpr const char* valueTypeName()
     else if constexpr (std::is_same_v<T, Tuple>) {
         return "tuple";
     }
+    else if constexpr (std::is_same_v<T, None>) {
+        return "none";
+    }
 
     return "<unknown>";
 }
@@ -233,6 +337,20 @@ const T& Tuple::get(const std::string& name) const
     }
 
     return value->get<T>();
+}
+
+/**
+ * @brief Wraps a Value in a 1-element unnamed generic Tuple if it is not already a Tuple.
+ *
+ * This allows scalar values (e.g. a bare Numeric) to be passed into constructors that
+ * expect a Tuple and use CSS-like expansion (1 element → all sides equal).
+ */
+inline Tuple asTuple(const Value& value)
+{
+    if (value.holds<Tuple>()) {
+        return value.get<Tuple>();
+    }
+    return Tuple({Tuple::Element::unnamed(value)});
 }
 
 /**
@@ -270,6 +388,56 @@ public:
 private:
     std::vector<ParamDef> params_;
 };
+
+/**
+ * @brief Extracts a typed value from an optional Value without explicit casting.
+ *
+ * Provides a uniform interface for the two common extraction patterns:
+ *
+ * - For domain wrapper types constructible from `const Value&` (Insets, Corners,
+ *   InnerShadow, …): constructs `T` from the value and returns nullopt if the
+ *   constructor throws Base::Exception (i.e. the value has the wrong structure).
+ *
+ * - For variant member types (Numeric, Base::Color, std::string, Tuple): returns
+ *   the value only if it holds exactly `T`, nullopt otherwise.
+ *
+ * This function is the shared building block for ParameterManager::resolve(definition)
+ * and FreeCADStyle::resolve<T>(), ensuring both use identical dispatch logic.
+ */
+template<typename T>
+    requires std::is_constructible_v<T, const Value&>
+std::optional<T> valueAs(const std::optional<Value>& value)
+{
+    if (!value) {
+        return std::nullopt;
+    }
+    try {
+        return T(*value);
+    }
+    catch (const Base::Exception&) {
+        return std::nullopt;
+    }
+}
+
+template<typename T>
+    requires(!std::is_constructible_v<T, const Value&>) && (!std::is_arithmetic_v<T>)
+std::optional<T> valueAs(const std::optional<Value>& value)
+{
+    if (!value || !value->holds<T>()) {
+        return std::nullopt;
+    }
+    return value->get<T>();
+}
+
+template<typename T>
+    requires std::is_arithmetic_v<T>
+std::optional<T> valueAs(const std::optional<Value>& value)
+{
+    if (const auto numeric = valueAs<Numeric>(value)) {
+        return static_cast<T>(*numeric);
+    }
+    return std::nullopt;
+}
 
 }  // namespace Gui::StyleParameters
 

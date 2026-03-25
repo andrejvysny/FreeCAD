@@ -1384,9 +1384,12 @@ SET(FreeCADGui_CPP_SRCS
     FileHandler.cpp
     FileHandler.h
     FreeCADStyle.cpp
+    StyleToken.cpp
+    ThemeReloadEvent.cpp
     GuiApplication.cpp
     GuiApplicationNativeEventAware.cpp
     GuiConsole.cpp
+    IconManager.cpp
     InputHintWidget.cpp
     InputHintPy.cpp
     Macro.cpp
@@ -1424,12 +1427,15 @@ SET(FreeCADGui_SRCS
     ExpressionCompleter.h
     FreeCADGuiInit.py
     FreeCADStyle.h
+    ThemeReloadEvent.h
+    StyleToken.h
     GraphicsViewZoom.h
     GuiApplication.h
     GuiApplicationNativeEventAware.h
     3Dconnexion/GuiAbstractNativeEvent.h
     GuiConsole.h
     InventorAll.h
+    IconManager.h
     InputHint.h
     InputHintPy.h
     InputHintWidget.h
@@ -1451,11 +1457,16 @@ SET(FreeCADGui_SRCS
     ManualAlignment.h
     StartupProcess.h
     StatusBarLabel.h
+    StyleParameters.h
     TransactionObject.h
     ToolHandler.h
     StyleParameters/Value.h
     StyleParameters/Parser.h
     StyleParameters/ParameterManager.h
+    StyleParameters/Insets.h
+    StyleParameters/Corners.h
+    StyleParameters/Gradient.h
+    StyleParameters/InnerShadow.h
 )
 
 SET(FreeCADGui_SRCS

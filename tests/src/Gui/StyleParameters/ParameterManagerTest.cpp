@@ -25,6 +25,7 @@
 
 #include <Gui/Application.h>
 #include <Gui/Utilities.h>
+#include <Gui/StyleParameters/Insets.h>
 #include <Gui/StyleParameters/ParameterManager.h>
 
 using namespace Gui::StyleParameters;
@@ -352,4 +353,326 @@ TEST_F(ParameterManagerTest, ResolveParameterDefinitionDefault)
     auto result = manager.resolve(MarginSize);
     EXPECT_DOUBLE_EQ(result.value, 16);
     EXPECT_EQ(result.unit, "px");
+}
+
+// --- QSS formatting tests (via replacePlaceholders) ---
+
+TEST_F(ParameterManagerTest, QssFormattingNumeric)
+{
+    EXPECT_EQ(manager.replacePlaceholders("@{16px}"), "16px");
+}
+
+TEST_F(ParameterManagerTest, QssFormattingColor)
+{
+    EXPECT_EQ(manager.replacePlaceholders("@{#ff0000}"), "#ff0000");
+}
+
+TEST_F(ParameterManagerTest, QssFormattingGenericTuple)
+{
+    EXPECT_EQ(manager.replacePlaceholders("@{(1px, 2px)}"), "1px 2px");
+}
+
+TEST_F(ParameterManagerTest, QssFormattingInsetsTuple)
+{
+    EXPECT_EQ(manager.replacePlaceholders("@{padding(10px, 5px)}"), "10px 5px 10px 5px");
+}
+
+// --- @{expression} substitution tests ---
+
+TEST_F(ParameterManagerTest, InlineExpressionSimple)
+{
+    auto result = manager.replacePlaceholders("padding: @{10px}");
+    EXPECT_EQ(result, "padding: 10px");
+}
+
+TEST_F(ParameterManagerTest, InlineExpressionFunctionCall)
+{
+    auto result = manager.replacePlaceholders("padding: @{padding(10px, 5px)}");
+    EXPECT_EQ(result, "padding: 10px 5px 10px 5px");
+}
+
+TEST_F(ParameterManagerTest, InlineExpressionWithParameterReference)
+{
+    auto source = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"InlineBase", "8px"}},
+        ParameterSource::Metadata {"Inline Source"}
+    );
+    manager.addSource(source.get());
+    sources.push_back(std::move(source));
+
+    auto result = manager.replacePlaceholders("padding: @{padding(@InlineBase)}");
+    EXPECT_EQ(result, "padding: 8px 8px 8px 8px");
+}
+
+TEST_F(ParameterManagerTest, InlineExpressionArithmetic)
+{
+    auto result = manager.replacePlaceholders("margin: @{@BaseSize * 2}");
+    EXPECT_EQ(result, "margin: 32px");
+}
+
+TEST_F(ParameterManagerTest, InlineExpressionMixedWithToken)
+{
+    auto result = manager.replacePlaceholders("padding: @{padding(10px)}; color: @PrimaryColor;");
+    EXPECT_EQ(result, "padding: 10px 10px 10px 10px; color: #ff0000;");
+}
+
+TEST_F(ParameterManagerTest, InlineExpressionInvalidLogsWarning)
+{
+    auto result = manager.replacePlaceholders("padding: @{!!!invalid}");
+    EXPECT_EQ(result, "padding: ");
+}
+
+TEST_F(ParameterManagerTest, InlineExpressionMultiple)
+{
+    auto result = manager.replacePlaceholders("@{@BaseSize} @{@BaseSize * 2}");
+    EXPECT_EQ(result, "16px 32px");
+}
+
+TEST_F(ParameterManagerTest, ExistingTokenUsesToQss)
+{
+    // @TokenName for non-tuple types should still work identically
+    auto result = manager.replacePlaceholders("size: @BaseSize; color: @PrimaryColor;");
+    EXPECT_EQ(result, "size: 16px; color: #ff0000;");
+}
+
+TEST_F(ParameterManagerTest, QssFormattingLinearGradient)
+{
+    auto result = manager.replacePlaceholders("background: @{linear_gradient(#ff0000, #0000ff)}");
+    EXPECT_EQ(
+        result,
+        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ff0000, stop:1 #0000ff)"
+    );
+}
+
+TEST_F(ParameterManagerTest, QssFormattingLinearGradientCustomGeometry)
+{
+    auto result = manager.replacePlaceholders(
+        "background: @{linear_gradient(x1: 0, y1: 0, x2: 1, y2: 0, #ff0000, #0000ff)}"
+    );
+    EXPECT_EQ(
+        result,
+        "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff0000, stop:1 #0000ff)"
+    );
+}
+
+TEST_F(ParameterManagerTest, QssFormattingRadialGradient)
+{
+    auto result = manager.replacePlaceholders("background: @{radial_gradient(#ff0000, #0000ff)}");
+    EXPECT_EQ(
+        result,
+        "background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, "
+        "stop:0 #ff0000, stop:1 #0000ff)"
+    );
+}
+
+// --- Coercive resolve<T> tests ---
+
+// Bare Numeric "5px" should be coerced into a 1-element generic Tuple and expanded to all sides.
+TEST_F(ParameterManagerTest, ResolvePaddingFromBareNumeric)
+{
+    auto coerciveSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BasePadding", "5px"}},
+        ParameterSource::Metadata {"Coercive Source"}
+    );
+    manager.addSource(coerciveSource.get());
+    sources.push_back(std::move(coerciveSource));
+
+    ParameterDefinition<Padding> definition {
+        .name = "BasePadding",
+        .defaultValue = Padding(Tuple({}, TupleKind::Padding)),
+    };
+
+    // Can't default-construct an empty Padding directly, so use a separate check for the result
+    auto result = manager.resolve(definition);
+    EXPECT_DOUBLE_EQ(result.top().value, 5.0);
+    EXPECT_EQ(result.top().unit, "px");
+    EXPECT_DOUBLE_EQ(result.right().value, 5.0);
+    EXPECT_DOUBLE_EQ(result.bottom().value, 5.0);
+    EXPECT_DOUBLE_EQ(result.left().value, 5.0);
+}
+
+// 1-element generic Tuple "(5px)" should be expanded to all sides equal.
+TEST_F(ParameterManagerTest, ResolvePaddingFromOneElementGenericTuple)
+{
+    auto coerciveSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BasePadding", "(5px)"}},
+        ParameterSource::Metadata {"Coercive Source"}
+    );
+    manager.addSource(coerciveSource.get());
+    sources.push_back(std::move(coerciveSource));
+
+    ParameterDefinition<Padding> definition {
+        .name = "BasePadding",
+        .defaultValue = Padding(Tuple({}, TupleKind::Padding)),
+    };
+
+    auto result = manager.resolve(definition);
+    EXPECT_DOUBLE_EQ(result.top().value, 5.0);
+    EXPECT_EQ(result.top().unit, "px");
+    EXPECT_DOUBLE_EQ(result.right().value, 5.0);
+    EXPECT_DOUBLE_EQ(result.bottom().value, 5.0);
+    EXPECT_DOUBLE_EQ(result.left().value, 5.0);
+}
+
+// Typed "padding(5px)" Tuple should be passed through and expand to all sides equal.
+TEST_F(ParameterManagerTest, ResolvePaddingFromTypedPaddingTuple)
+{
+    auto coerciveSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BasePadding", "padding(5px)"}},
+        ParameterSource::Metadata {"Coercive Source"}
+    );
+    manager.addSource(coerciveSource.get());
+    sources.push_back(std::move(coerciveSource));
+
+    ParameterDefinition<Padding> definition {
+        .name = "BasePadding",
+        .defaultValue = Padding(Tuple({}, TupleKind::Padding)),
+    };
+
+    auto result = manager.resolve(definition);
+    EXPECT_DOUBLE_EQ(result.top().value, 5.0);
+    EXPECT_EQ(result.top().unit, "px");
+    EXPECT_DOUBLE_EQ(result.right().value, 5.0);
+    EXPECT_DOUBLE_EQ(result.bottom().value, 5.0);
+    EXPECT_DOUBLE_EQ(result.left().value, 5.0);
+}
+
+// Kind mismatch: "margins(5px)" resolved as Padding should fall back to the default.
+TEST_F(ParameterManagerTest, ResolvePaddingFromWrongKindFallsBackToDefault)
+{
+    auto coerciveSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BasePadding", "margins(5px)"}},
+        ParameterSource::Metadata {"Coercive Source"}
+    );
+    manager.addSource(coerciveSource.get());
+    sources.push_back(std::move(coerciveSource));
+
+    const Numeric defaultValue {.value = 99, .unit = "px"};
+    Padding defaultPadding(Tuple(
+        {
+            Tuple::Element::named("top", Value(defaultValue)),
+            Tuple::Element::named("right", Value(defaultValue)),
+            Tuple::Element::named("bottom", Value(defaultValue)),
+            Tuple::Element::named("left", Value(defaultValue)),
+        },
+        TupleKind::Padding
+    ));
+
+    ParameterDefinition<Padding> definition {
+        .name = "BasePadding",
+        .defaultValue = std::move(defaultPadding),
+    };
+
+    auto result = manager.resolve(definition);
+    EXPECT_DOUBLE_EQ(result.top().value, 99.0);
+    EXPECT_EQ(result.top().unit, "px");
+}
+
+// --- reset() function tests ---
+
+// reset() expression causes resolve() to return Value{None{}}, not nullopt.
+// The distinction matters: nullopt means "not defined", None means "explicitly reset".
+TEST_F(ParameterManagerTest, ResetExpressionResolvesToNone)
+{
+    auto resetSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BaseSize", "reset()"}},
+        ParameterSource::Metadata {"Reset Source"}
+    );
+    manager.addSource(resetSource.get());
+    sources.push_back(std::move(resetSource));
+
+    auto result = manager.resolve("BaseSize");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->holds<None>());
+}
+
+// A higher-priority source with reset() overrides a lower-priority value.
+TEST_F(ParameterManagerTest, ResetOverridesInheritedValue)
+{
+    auto overrideSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"PrimaryColor", "reset()"}},
+        ParameterSource::Metadata {"Override Source"}
+    );
+    manager.addSource(overrideSource.get());
+    sources.push_back(std::move(overrideSource));
+
+    // PrimaryColor was "#ff0000" in Source 1 — now explicitly reset.
+    auto result = manager.resolve("PrimaryColor");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->holds<None>());
+
+    // BaseSize should still resolve normally.
+    auto baseSize = manager.resolve("BaseSize");
+    ASSERT_TRUE(baseSize.has_value());
+    EXPECT_TRUE(baseSize->holds<Numeric>());
+}
+
+// Typed resolve<T> of a reset parameter falls back to the definition default.
+TEST_F(ParameterManagerTest, ResetFallsBackToDefinitionDefault)
+{
+    auto resetSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BaseSize", "reset()"}},
+        ParameterSource::Metadata {"Reset Source"}
+    );
+    manager.addSource(resetSource.get());
+    sources.push_back(std::move(resetSource));
+
+    ParameterDefinition<Numeric> definition {
+        .name = "BaseSize",
+        .defaultValue = Numeric {.value = 42, .unit = "px"},
+    };
+
+    auto result = manager.resolve(definition);
+    EXPECT_DOUBLE_EQ(result.value, 42.0);
+    EXPECT_EQ(result.unit, "px");
+}
+
+// reset() with arguments should throw an expression error.
+TEST_F(ParameterManagerTest, ResetWithArgumentsThrows)
+{
+    auto badSource = std::make_unique<InMemoryParameterSource>(
+        std::list<Parameter> {{"BadToken", "reset(10px)"}},
+        ParameterSource::Metadata {"Bad Source"}
+    );
+    manager.addSource(badSource.get());
+    sources.push_back(std::move(badSource));
+
+    // Should not resolve to a valid Numeric (the parse fails → fallback to string).
+    auto result = manager.resolve("BadToken");
+    // The exception causes the fallback string path, result is a string not a Numeric.
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->holds<std::string>());
+}
+
+// Value holding None serialises as "reset()".
+TEST_F(ParameterManagerTest, NoneToString)
+{
+    Value noneValue {None {}};
+    EXPECT_EQ(noneValue.toString(), "reset()");
+}
+
+// holds<None>() is true for a None value and false for other types.
+TEST_F(ParameterManagerTest, NoneHoldsCheck)
+{
+    Value noneValue {None {}};
+    EXPECT_TRUE(noneValue.holds<None>());
+    EXPECT_FALSE(noneValue.holds<Numeric>());
+    EXPECT_FALSE(noneValue.holds<Base::Color>());
+    EXPECT_FALSE(noneValue.holds<std::string>());
+    EXPECT_FALSE(noneValue.holds<Tuple>());
+}
+
+// valueAs<T> returns nullopt when the value is None.
+TEST_F(ParameterManagerTest, ValueAsReturnsNulloptForNone)
+{
+    std::optional<Value> noneOpt {Value {None {}}};
+    EXPECT_FALSE(valueAs<Numeric>(noneOpt).has_value());
+    EXPECT_FALSE(valueAs<Base::Color>(noneOpt).has_value());
+}
+
+// reset() in an @{...} inline expression in QSS produces an empty string.
+TEST_F(ParameterManagerTest, ResetInQssInlineExpressionProducesEmptyString)
+{
+    auto result = manager.replacePlaceholders("color: @{reset()}");
+    EXPECT_EQ(result, "color: ");
 }

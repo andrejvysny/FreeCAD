@@ -39,6 +39,7 @@ TaskEditControl::TaskEditControl(QWidget* parent)
     buttonBox->setCenterButtons(true);
 
     hboxLayout->addWidget(buttonBox);
+    hboxLayout->setContentsMargins(0, 0, 0, 8);
 }
 
 TaskEditControl::~TaskEditControl() = default;

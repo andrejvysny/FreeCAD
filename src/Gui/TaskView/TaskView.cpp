@@ -234,6 +234,36 @@ void TaskBox::actionEvent(QActionEvent* e)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 TaskPanel::TaskPanel(QWidget* parent)
+    : QSint::ActionPanel(parent)
+{
+    setContentsMargins(QMargins {});
+    layout()->setSpacing(16);
+}
+
+TaskPanel::~TaskPanel() = default;
+
+QSize TaskPanel::minimumSizeHint() const
+{
+    // ActionPanel returns a size of 200x150 which leads to problems
+    // when there are several task groups in the panel and the first
+    // one is collapsed. In this case the task panel doesn't expand to
+    // the actually required size and all the remaining groups are
+    // squeezed into the available space and thus the widgets in there
+    // often can't be used any more.
+    // To fix this problem minimumSizeHint() is implemented to again
+    // respect the layout's minimum size.
+    QSize s1 = QSint::ActionPanel::minimumSizeHint();
+    QSize s2 = QWidget::minimumSizeHint();
+    return {qMax(s1.width(), s2.width()), qMax(s1.height(), s2.height())};
+}
+
+
+//**************************************************************************
+//**************************************************************************
+// TaskView
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+TaskView::TaskView(QWidget* parent)
     : QWidget(parent)
 {
     mainLayout = new QVBoxLayout(this);
@@ -262,6 +292,7 @@ TaskPanel::TaskPanel(QWidget* parent)
     scrollArea->setWidgetResizable(true);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scrollArea->setMinimumWidth(200);
+    scrollArea->setContentsMargins(QMargins {});
     dialogLayout->addWidget(scrollArea, 1);
 }
 
