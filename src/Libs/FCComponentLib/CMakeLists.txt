@@ -7,34 +7,10 @@ if(NOT TARGET FreeCADBase)
     project(FCComponentLib VERSION 0.1 LANGUAGES CXX)
     set(CMAKE_CXX_STANDARD 23)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    find_package(Qt6 6.8 REQUIRED COMPONENTS Core Widgets Svg)
-    find_package(yaml-cpp REQUIRED)
-    find_package(fmt REQUIRED)
-    # FreeCADBase is required for Base::Color, Base::Exception
-    find_package(FreeCADBase REQUIRED)
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Core Widgets)
 endif()
 
 set(CMAKE_AUTOMOC TRUE)
-
-# Token system sources (extracted from Gui/StyleParameters)
-set(FCComponentLib_Tokens_SRCS
-    Tokens/Value.h
-    Tokens/Value.cpp
-    Tokens/Parser.h
-    Tokens/Parser.cpp
-    Tokens/TokenManager.h
-    Tokens/TokenManager.cpp
-    Tokens/TokenSource.h
-    Tokens/TokenSource.cpp
-)
-
-# Style system sources
-set(FCComponentLib_Style_SRCS
-    Style/ComponentStyle.h
-    Style/ComponentStyle.cpp
-    Style/ComponentPalette.h
-    Style/ComponentPalette.cpp
-)
 
 # Component infrastructure
 set(FCComponentLib_Components_SRCS
@@ -43,65 +19,29 @@ set(FCComponentLib_Components_SRCS
     Components/ComponentRegistry.cpp
 )
 
+# Minimal palette helpers kept for the gallery shell.
+set(FCComponentLib_Style_SRCS
+    Style/ComponentPalette.h
+    Style/ComponentPalette.cpp
+)
+
 # Widget sources
 set(FCComponentLib_Widgets_SRCS
     Components/Buttons/FcPushButton.h
     Components/Buttons/FcPushButton.cpp
-    Components/Inputs/FcSpinBox.h
-    Components/Inputs/FcSpinBox.cpp
-    Components/Inputs/FcDoubleSpinBox.h
-    Components/Inputs/FcDoubleSpinBox.cpp
-    Components/Inputs/FcLineEdit.h
-    Components/Inputs/FcLineEdit.cpp
-    Components/Inputs/FcComboBox.h
-    Components/Inputs/FcComboBox.cpp
-    Components/Feedback/FcColorButton.h
-    Components/Feedback/FcColorButton.cpp
-    Components/Buttons/FcSplitButton.h
-    Components/Buttons/FcSplitButton.cpp
-    Components/Buttons/FcButtonGroup.h
-    Components/Buttons/FcButtonGroup.cpp
-    Components/Buttons/FcColorPicker.h
-    Components/Buttons/FcColorPickerPrivate.h
-    Components/Buttons/FcColorPicker.cpp
-    Components/Buttons/FcColorPickerPrivate.cpp
-    Components/Inputs/FcElideCheckBox.h
-    Components/Inputs/FcElideCheckBox.cpp
-    Components/Inputs/FcAccelLineEdit.h
-    Components/Inputs/FcAccelLineEdit.cpp
-    Components/Inputs/FcClearLineEdit.h
-    Components/Inputs/FcClearLineEdit.cpp
-    Components/Inputs/FcModifierLineEdit.h
-    Components/Inputs/FcModifierLineEdit.cpp
-    Components/Inputs/FcLabelButton.h
-    Components/Inputs/FcLabelButton.cpp
-    Components/Inputs/FcLabelEditor.h
-    Components/Inputs/FcLabelEditor.cpp
-    Components/Inputs/FcImageTextEdit.h
-    Components/Inputs/FcImageTextEdit.cpp
-    Components/Display/FcUrlLabel.h
-    Components/Display/FcUrlLabel.cpp
-    Components/Display/FcCompassDial.h
-    Components/Display/FcCompassDial.cpp
-    Components/Display/FcPropertyListEditor.h
-    Components/Display/FcPropertyListEditor.cpp
-    Components/Containers/FcActionSelector.h
-    Components/Containers/FcActionSelector.cpp
 )
 
 add_library(FCComponentLib SHARED
     FCComponentLibGlobal.h
-    ${FCComponentLib_Tokens_SRCS}
-    ${FCComponentLib_Style_SRCS}
     ${FCComponentLib_Components_SRCS}
+    ${FCComponentLib_Style_SRCS}
     ${FCComponentLib_Widgets_SRCS}
 )
 
 target_compile_definitions(FCComponentLib PRIVATE FCComponentLib_EXPORTS)
 
 target_link_libraries(FCComponentLib
-    PUBLIC Qt6::Core Qt6::Widgets Qt6::Svg FreeCADBase
-    PRIVATE yaml-cpp::yaml-cpp fmt::fmt
+    PUBLIC Qt6::Core Qt6::Widgets
 )
 
 target_include_directories(FCComponentLib
@@ -122,6 +62,3 @@ install(DIRECTORY
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/FCComponentLib
     FILES_MATCHING PATTERN "*.h"
 )
-
-# Install token YAML files as data
-install(DIRECTORY Tokens/tokens/ DESTINATION share/FCComponentLib/tokens)

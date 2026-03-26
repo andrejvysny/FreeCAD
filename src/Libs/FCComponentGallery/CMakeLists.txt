@@ -32,10 +32,6 @@ set(FCComponentGallery_SRCS
     Stories/StoryRegistry.h
     Stories/StoryRegistry.cpp
     Stories/ButtonStories.cpp
-    Stories/InputStories.cpp
-    Stories/FeedbackStories.cpp
-    Stories/DisplayStories.cpp
-    Stories/ContainerStories.cpp
 )
 
 add_executable(FCComponentGallery ${FCComponentGallery_SRCS})

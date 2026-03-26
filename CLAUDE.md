@@ -210,22 +210,121 @@ OpenCASCADE (geometry kernel), Coin3D (3D rendering), Qt6 (GUI), Python 3.11 (sc
 - **Macro files**: `.FCMacro` extension (not `.py`)
 - Current version: 1.2.0dev
 
+## FCComponentLib — Logic-Free Widget Architecture
+
+### Core Principle
+
+FCComponentLib (`src/Libs/FCComponentLib/`) contains **pure Qt widgets with ZERO business logic**. All FreeCAD-specific behavior lives in **adapter classes** in `src/Gui/Adapters/`. Widgets never include headers from `App/`, `Base/`, or Coin3D.
+
+### Dependency Rule
+
+```
+FCComponentLib links: Qt6::Core Qt6::Widgets Qt6::Svg ONLY
+                      NO FreeCADBase, NO FreeCADApp, NO FreeCADGui
+```
+
+If a widget needs FreeCAD data (quantities, expressions, parameters, selection), that logic goes into an adapter in `src/Gui/Adapters/`, never into the widget itself.
+
+### Architecture
+
+```
+src/Gui/Adapters/          ← ALL FreeCAD logic lives here
+  QuantityAdapter          → converts Base::Quantity ↔ double + QString
+  ExpressionAdapter        → binds App::ObjectIdentifier, pushes results to widget
+  PrefAdapter              → reads/writes Base::Parameter, syncs widget value
+  SelectionAdapter         → observes Gui::Selection, pushes to model
+  PropertyEditorAdapter    → maps App::Property → editor widget
+
+src/Libs/FCComponentLib/   ← PURE Qt widgets, zero FreeCAD deps
+  Components/Buttons/      → FcPushButton, FcSplitButton, FcToolButton, ...
+  Components/Inputs/       → FcSpinBox, FcLineEdit, FcCheckBox, ...
+  Components/Display/      → FcUrlLabel, FcSeparator, ...
+  Components/Containers/   → FcCollapsibleGroup, FcActionSelector, ...
+  Components/Feedback/     → FcColorButton, ...
+  Tokens/                  → Design token system (theme values)
+  Style/                   → Component styling engine
+```
+
+### Widget Rules (enforced during extraction)
+
+1. **No FreeCAD includes** — widget `.h`/`.cpp` files must not `#include` anything from `App/`, `Base/`, `Gui/`, or Coin3D
+2. **No singletons** — no `App::GetApplication()`, `Gui::Selection()`, `Gui::Application::Instance`
+3. **No domain types in Q_PROPERTY** — use `double`, `QString`, `QColor`, `int`, `bool` — never `Base::Quantity`
+4. **Communication via Qt signals/slots only** — adapters connect widget signals to FreeCAD logic
+5. **Styling via tokens/QSS only** — no hardcoded colors, sizes, or fonts
+6. **Every widget gets a gallery story** in `src/Libs/FCComponentGallery/Stories/`
+
+### Adapter Pattern Example
+
+```cpp
+// WRONG — logic in widget:
+class FcQuantitySpinBox : public QDoubleSpinBox {
+    Q_PROPERTY(Base::Quantity value ...)  // ← FreeCAD type in widget
+    void setValue(Base::Quantity q) { ... }  // ← unit conversion in widget
+};
+
+// CORRECT — logic in adapter:
+// Widget (src/Libs/FCComponentLib/) — pure Qt
+class FcFloatEditor : public QWidget {
+    Q_PROPERTY(double value READ value WRITE setValue NOTIFY valueChanged)
+    Q_PROPERTY(QString suffix READ suffix WRITE setSuffix)
+signals:
+    void valueChanged(double);
+    void textEdited(const QString&);  // raw user input
+};
+
+// Adapter (src/Gui/Adapters/) — FreeCAD logic
+class QuantityAdapter : public QObject {
+    QuantityAdapter(FcComponents::FcFloatEditor* editor, App::PropertyFloat* prop);
+    // Connects editor::valueChanged → property write
+    // Connects property change → editor::setValue + setSuffix
+    // Handles Base::Quantity parsing, unit conversion, expression binding
+};
+```
+
+### Extraction Workflow
+
+Each component is extracted **one at a time** using the `extract-component` skill. The process:
+
+1. **Analyze** — read original source, map all FreeCAD coupling points
+2. **Create widget** — pure Qt version in `src/Libs/FCComponentLib/Components/{Category}/`
+3. **Create adapter** (if needed) — in `src/Gui/Adapters/` bridging widget ↔ FreeCAD
+4. **Create gallery story** — in `src/Libs/FCComponentGallery/Stories/`
+5. **Update CMakeLists.txt** — add files to both libraries
+6. **Verify** — gallery builds standalone, FreeCAD builds with adapter, no regressions
+
+### Existing Infrastructure
+
+- **Namespace**: `FcComponents`
+- **Export macro**: `FCComponentLibExport`
+- **Registration**: `FC_REGISTER_COMPONENT(ClassName, "Category", "Description")`
+- **Token system**: `Tokens/TokenManager` for theme values (colors, spacing, fonts)
+- **Style system**: `Style/ComponentStyle` + `Style/FcStyle` for widget styling
+- **Gallery app**: `src/Libs/FCComponentGallery/` — Storybook-like standalone viewer
+
+### Files to Reference
+
+- `src/Libs/FCComponentLib/EXTRACTION_REPORT.md` — status of extracted vs skipped widgets
+- `src/Libs/FCComponentLib/PLAN.md` — extraction candidates with coupling scores
+- `FCComponentLibrary_Implementation_Plan.md` — full architecture and phased plan
+
 ## Subagent Orchestration
 
 Delegate domain-specific tasks to specialized subagents for higher quality output.
 
-| Domain        | Agent               | When                                                                |
-| ------------- | ------------------- | ------------------------------------------------------------------- |
-| C++ code      | `cpp-developer`     | Any C++ in src/Base, src/App, src/Gui, src/Mod/_/App, src/Mod/_/Gui |
-| Python code   | `python-developer`  | FeaturePython, Commands, Workbenches, Init\*.py                     |
-| Qt/Coin3D GUI | `qt-gui-expert`     | Dialogs, task panels, ViewProvider scenes, .ui files, themes        |
-| Code review   | `freecad-reviewer`  | PR review, standards compliance checks                              |
-| Architecture  | `freecad-architect` | Cross-module design, layer analysis, new workbench planning         |
-| OCCT geometry | `occt-geometry`     | TopoShape, Part::Geometry, element mapping, BRep ops                |
-| Tests         | `test-developer`    | gtest or unittest test writing                                      |
-| Build system  | `cmake-build`       | CMakeLists, build config, module toggles                            |
-| i18n          | `i18n-checker`      | Translation string validation                                       |
-| Migration     | `migration-helper`  | Legacy pattern updates (Arch->BIM, Path->CAM, etc.)                 |
-| UI/UX review  | `ui-ux-reviewer`    | Screenshot analysis, dialog optimization                            |
+| Domain          | Agent                | When                                                                |
+| --------------- | -------------------- | ------------------------------------------------------------------- |
+| C++ code        | `cpp-developer`      | Any C++ in src/Base, src/App, src/Gui, src/Mod/_/App, src/Mod/_/Gui |
+| Python code     | `python-developer`   | FeaturePython, Commands, Workbenches, Init\*.py                     |
+| Qt/Coin3D GUI   | `qt-gui-expert`      | Dialogs, task panels, ViewProvider scenes, .ui files, themes        |
+| Widget extract  | `extract-component`  | Extracting a widget to FCComponentLib + creating adapter            |
+| Code review     | `freecad-reviewer`   | PR review, standards compliance checks                              |
+| Architecture    | `freecad-architect`  | Cross-module design, layer analysis, new workbench planning         |
+| OCCT geometry   | `occt-geometry`      | TopoShape, Part::Geometry, element mapping, BRep ops                |
+| Tests           | `test-developer`     | gtest or unittest test writing                                      |
+| Build system    | `cmake-build`        | CMakeLists, build config, module toggles                            |
+| i18n            | `i18n-checker`       | Translation string validation                                       |
+| Migration       | `migration-helper`   | Legacy pattern updates (Arch->BIM, Path->CAM, etc.)                 |
+| UI/UX review    | `ui-ux-reviewer`     | Screenshot analysis, dialog optimization                            |
 
 For complex features spanning multiple domains, use the architect first to plan, then delegate implementation to domain agents in parallel.

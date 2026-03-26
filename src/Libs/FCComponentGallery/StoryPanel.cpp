@@ -48,6 +48,13 @@ StoryPanel::StoryPanel(QWidget* parent)
 
     m_group = new QButtonGroup(this);
     m_group->setExclusive(true);
+    connect(m_group, &QButtonGroup::idClicked, this, [this](int id) {
+        if (id < 0 || id >= static_cast<int>(m_stories.size()) || !m_target) {
+            return;
+        }
+        m_stories[static_cast<size_t>(id)].configure(m_target);
+        Q_EMIT storyApplied();
+    });
 }
 
 void StoryPanel::setComponent(const char* componentName, QWidget* targetWidget)
@@ -76,14 +83,6 @@ void StoryPanel::setComponent(const char* componentName, QWidget* targetWidget)
         m_flowLayout->addWidget(pill);
     }
 
-    connect(m_group, &QButtonGroup::idClicked, this, [this](int id) {
-        if (id < 0 || id >= static_cast<int>(m_stories.size()) || !m_target) {
-            return;
-        }
-        m_stories[static_cast<size_t>(id)].configure(m_target);
-        Q_EMIT storyApplied();
-    });
-
     // Select first story by default
     if (auto* first = m_group->button(0)) {
         first->setChecked(true);
@@ -95,6 +94,9 @@ void StoryPanel::setComponent(const char* componentName, QWidget* targetWidget)
 
 void StoryPanel::clearStories()
 {
+    // Disconnect signal before clearing to prevent duplicate connections
+    disconnect(m_group, &QButtonGroup::idClicked, this, nullptr);
+
     // Remove all buttons from the group
     for (auto* btn : m_group->buttons()) {
         m_group->removeButton(btn);
