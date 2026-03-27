@@ -37,8 +37,6 @@
 #include "ThemeSelectorWidget.h"
 
 #include <App/Application.h>
-#include <Gui/Application.h>
-#include <Gui/Command.h>
 #include <gsl/pointers>
 
 using namespace StartGui;
@@ -164,21 +162,6 @@ bool FirstStartWidget::eventFilter(QObject* object, QEvent* event)
     return QWidget::eventFilter(object, event);
 }
 
-bool FirstStartWidget::openAdvancedSettings()
-{
-    if (!Gui::Application::Instance) {
-        return false;
-    }
-
-    auto& commandManager = Gui::Application::Instance->commandManager();
-    if (!commandManager.getCommandByName("Std_DlgPreferences")) {
-        return false;
-    }
-
-    commandManager.runCommandByName("Std_DlgPreferences");
-    return true;
-}
-
 void FirstStartWidget::updateWordmark()
 {
     QString wordmarkPath = shouldUseLightWordmark(_wordmarkLabel)
@@ -199,9 +182,7 @@ void FirstStartWidget::refreshFromPreferences()
 
 void FirstStartWidget::onAdvancedSettingsClicked()
 {
-    if (openAdvancedSettings()) {
-        refreshFromPreferences();
-    }
+    Q_EMIT advancedSettingsRequested();
 }
 
 void FirstStartWidget::retranslateUi()

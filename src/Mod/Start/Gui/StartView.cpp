@@ -37,17 +37,16 @@
 #include <QScrollArea>
 #include <QTimer>
 #include <QWidget>
-#include <QStackedWidget>
 #include <QShowEvent>
 
 #include "StartView.h"
 #include "ExamplesListDelegate.h"
 #include "FileCardDelegate.h"
 #include "FileCardView.h"
-#include "FirstStartWidget.h"
 #include "FlowLayout.h"
 #include "LearnLinksWidget.h"
 #include "NewFileButton.h"
+#include "StartupWizardController.h"
 #include <App/DocumentObject.h>
 #include <App/Application.h>
 #include <Base/Interpreter.h>
@@ -75,7 +74,6 @@ static constexpr int pageMargin = 24;
 static constexpr int topMargin = 32;
 static constexpr int bottomMargin = 16;
 static constexpr int sectionSpacing = 16;
-static constexpr int firstStartVerticalMargin = 24;
 
 QLabel* makeSectionLabel(const QString& text, QWidget* parent = nullptr)
 {
@@ -92,7 +90,6 @@ QLabel* makeSectionLabel(const QString& text, QWidget* parent = nullptr)
 
 StartView::StartView(QWidget* parent)
     : Gui::MDIView(nullptr, parent)
-    , _contents(new QStackedWidget(parent))
 {
     setObjectName(QLatin1String("StartView"));
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
@@ -103,43 +100,7 @@ StartView::StartView(QWidget* parent)
     std::string customFolder(hGrp->GetASCII("CustomFolder", ""));
     bool showCustomFolder = !customFolder.empty();
 
-    // =========================================================================
-    // First start page (unchanged)
-    // =========================================================================
-    auto firstStartScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
-    firstStartScrollArea->setFrameShape(QFrame::NoFrame);
-    auto firstStartScrollWidget = gsl::owner<QWidget*>(new QWidget(firstStartScrollArea));
-    firstStartScrollArea->setWidget(firstStartScrollWidget);
-    firstStartScrollArea->setWidgetResizable(true);
-
-    auto firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(this));
-    connect(firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
-    auto firstStartRegion = gsl::owner<QVBoxLayout*>(new QVBoxLayout(firstStartScrollWidget));
-    firstStartRegion->setContentsMargins(
-        pageMargin,
-        firstStartVerticalMargin,
-        pageMargin,
-        firstStartVerticalMargin
-    );
-    firstStartRegion->setSpacing(0);
-
-    auto firstStartRow = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
-    firstStartRow->setContentsMargins(0, 0, 0, 0);
-    firstStartRow->setSpacing(0);
-    firstStartRow->addStretch();
-    firstStartRow->addWidget(firstStartWidget);
-    firstStartRow->addStretch();
-
-    firstStartRegion->addStretch(1);
-    firstStartRegion->addLayout(firstStartRow);
-    firstStartRegion->addStretch(1);
-    _contents->addWidget(firstStartScrollArea);
-
-    // =========================================================================
-    // Documents page — two-column layout
-    // =========================================================================
     auto documentsWidget = gsl::owner<QWidget*>(new QWidget());
-    _contents->addWidget(documentsWidget);
 
     _bodyLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
     _bodyLayout->setSpacing(0);
@@ -185,7 +146,7 @@ StartView::StartView(QWidget* parent)
     // RECENT FILES section
     _recentFilesLabel = makeSectionLabel(QString());
     _leftContentLayout->addWidget(_recentFilesLabel);
-    auto recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
+    auto recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(documentsWidget));
     recentFilesListWidget->setProperty("startFileCardList", true);
     connect(recentFilesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
     _leftContentLayout->addWidget(recentFilesListWidget);
@@ -195,7 +156,7 @@ StartView::StartView(QWidget* parent)
     if (showCustomFolder) {
         _customFolderLabel = makeSectionLabel(QString());
         _leftContentLayout->addWidget(_customFolderLabel);
-        customFolderListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
+        customFolderListWidget = gsl::owner<FileCardView*>(new FileCardView(documentsWidget));
         customFolderListWidget->setProperty("startFileCardList", true);
         connect(customFolderListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
         _leftContentLayout->addWidget(customFolderListWidget);
@@ -292,13 +253,7 @@ StartView::StartView(QWidget* parent)
 
     _bodyLayout->addWidget(_rightScrollArea, 3);
 
-    setCentralWidget(_contents);
-
-    // =========================================================================
-    // Configure models and page selection
-    // =========================================================================
-    auto firstStart = hGrp->GetBool("FirstStart2024", true);
-    _contents->setCurrentWidget(firstStart ? firstStartScrollArea : documentsWidget);
+    setCentralWidget(documentsWidget);
 
     configureRecentFilesListWidget(recentFilesListWidget, _recentFilesLabel);
     if (customFolderListWidget) {
@@ -534,16 +489,7 @@ void StartView::showOnStartupChanged(bool checked)
 
 void StartView::openFirstStartClicked()
 {
-    _contents->setCurrentIndex(0);
-}
-
-void StartView::firstStartWidgetDismissed()
-{
-    auto hGrp = App::GetApplication().GetParameterGroupByPath(
-        "User parameter:BaseApp/Preferences/Mod/Start"
-    );
-    hGrp->SetBool("FirstStart2024", false);
-    _contents->setCurrentIndex(1);
+    StartupWizardController::instance().showManual();
 }
 
 void StartView::updateWordmark()

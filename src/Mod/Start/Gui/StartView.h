@@ -41,7 +41,6 @@ class QLabel;
 class QListView;
 class QMdiSubWindow;
 class QScrollArea;
-class QStackedWidget;
 class QPushButton;
 class QVBoxLayout;
 
@@ -99,7 +98,6 @@ protected:
     void fileCardSelected(const QModelIndex& index);
     void showOnStartupChanged(bool checked);
     void openFirstStartClicked();
-    void firstStartWidgetDismissed();
 
 private Q_SLOTS:
     void onMdiSubWindowActivated(QMdiSubWindow* subWindow);
@@ -109,7 +107,6 @@ private:
     void setListViewUpdatesEnabled(bool enabled);
     void updateWordmark();
 
-    QStackedWidget* _contents = nullptr;
     Start::RecentFilesModel _recentFilesModel;
     Start::ExamplesModel _examplesModel;
     Start::CustomFolderModel _customFolderModel;

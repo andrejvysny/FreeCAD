@@ -70,48 +70,6 @@ int nextIndex(const QComboBox* comboBox)
     return (comboBox->currentIndex() + 1) % comboBox->count();
 }
 
-class TestFirstStartWidget: public StartGui::FirstStartWidget
-{
-public:
-    using FirstStartWidget::FirstStartWidget;
-
-    int targetUnitSchema = 0;
-    QByteArray targetNavigationStyle;
-    int targetOrbitStyle = -1;
-    std::string targetThemeName;
-    bool advancedSettingsOpened = false;
-
-protected:
-    bool openAdvancedSettings() override
-    {
-        advancedSettingsOpened = true;
-
-        auto units = App::GetApplication().GetParameterGroupByPath(
-            "User parameter:BaseApp/Preferences/Units"
-        );
-        units->SetInt("UserSchema", targetUnitSchema);
-
-        auto view = App::GetApplication().GetParameterGroupByPath(
-            "User parameter:BaseApp/Preferences/View"
-        );
-        if (!targetNavigationStyle.isEmpty()) {
-            view->SetASCII("NavigationStyle", targetNavigationStyle.constData());
-        }
-        if (targetOrbitStyle >= 0) {
-            view->SetInt("OrbitStyle", targetOrbitStyle);
-        }
-
-        auto mainWindow = App::GetApplication().GetParameterGroupByPath(
-            "User parameter:BaseApp/Preferences/MainWindow"
-        );
-        if (!targetThemeName.empty()) {
-            mainWindow->SetASCII("Theme", targetThemeName);
-        }
-
-        return true;
-    }
-};
-
 class testFirstStartWidget: public QObject
 {
     Q_OBJECT
@@ -258,15 +216,33 @@ private Q_SLOTS:
         QCOMPARE(dismissedSpy.count(), 1);
     }
 
-    void advancedSettingsRefreshesWithoutDismissing()  // NOLINT
+    void advancedSettingsRequestDoesNotDismiss()  // NOLINT
     {
-        TestFirstStartWidget widget;
+        StartGui::FirstStartWidget widget;
         widget.resize(860, 520);
         widget.show();
         qApp->processEvents();
 
         auto* advancedButton
             = widget.findChild<QPushButton*>(QStringLiteral("firstStartSecondaryButton"));
+
+        QVERIFY(advancedButton);
+
+        QSignalSpy dismissedSpy(&widget, &StartGui::FirstStartWidget::dismissed);
+        QSignalSpy advancedSpy(&widget, &StartGui::FirstStartWidget::advancedSettingsRequested);
+        QTest::mouseClick(advancedButton, Qt::LeftButton);
+
+        QCOMPARE(dismissedSpy.count(), 0);
+        QCOMPARE(advancedSpy.count(), 1);
+    }
+
+    void refreshFromPreferencesUpdatesSelections()  // NOLINT
+    {
+        StartGui::FirstStartWidget widget;
+        widget.resize(860, 520);
+        widget.show();
+        qApp->processEvents();
+
         auto* unitCombo
             = widget.findChild<QComboBox*>(QStringLiteral("firstStartUnitSystemComboBox"));
         auto* navigationCombo
@@ -278,29 +254,31 @@ private Q_SLOTS:
         auto* lightButton
             = widget.findChild<QToolButton*>(QStringLiteral("firstStartThemeLightButton"));
 
-        QVERIFY(advancedButton);
         QVERIFY(unitCombo);
         QVERIFY(navigationCombo);
         QVERIFY(orbitCombo);
         QVERIFY(darkButton);
         QVERIFY(lightButton);
 
-        widget.targetUnitSchema = nextIndex(unitCombo);
+        const int targetUnitSchema = nextIndex(unitCombo);
         const int navigationIndex = nextIndex(navigationCombo);
-        widget.targetNavigationStyle = navigationCombo->itemData(navigationIndex).toByteArray();
-        widget.targetOrbitStyle = nextIndex(orbitCombo);
-        widget.targetThemeName = darkButton->isChecked() ? "FreeCAD Light" : "FreeCAD Dark";
+        const QByteArray targetNavigationStyle
+            = navigationCombo->itemData(navigationIndex).toByteArray();
+        const int targetOrbitStyle = nextIndex(orbitCombo);
+        const std::string targetThemeName = darkButton->isChecked() ? "FreeCAD Light" : "FreeCAD Dark";
 
-        QSignalSpy dismissedSpy(&widget, &StartGui::FirstStartWidget::dismissed);
-        QTest::mouseClick(advancedButton, Qt::LeftButton);
+        unitsPreferences->SetInt("UserSchema", targetUnitSchema);
+        viewPreferences->SetASCII("NavigationStyle", targetNavigationStyle.constData());
+        viewPreferences->SetInt("OrbitStyle", targetOrbitStyle);
+        mainWindowPreferences->SetASCII("Theme", targetThemeName);
 
-        QCOMPARE(dismissedSpy.count(), 0);
-        QVERIFY(widget.advancedSettingsOpened);
-        QCOMPARE(unitCombo->currentIndex(), widget.targetUnitSchema);
-        QCOMPARE(navigationCombo->currentData().toByteArray(), widget.targetNavigationStyle);
-        QCOMPARE(orbitCombo->currentData().toInt(), widget.targetOrbitStyle);
-        QCOMPARE(darkButton->isChecked(), widget.targetThemeName == "FreeCAD Dark");
-        QCOMPARE(lightButton->isChecked(), widget.targetThemeName == "FreeCAD Light");
+        widget.refreshFromPreferences();
+
+        QCOMPARE(unitCombo->currentIndex(), targetUnitSchema);
+        QCOMPARE(navigationCombo->currentData().toByteArray(), targetNavigationStyle);
+        QCOMPARE(orbitCombo->currentData().toInt(), targetOrbitStyle);
+        QCOMPARE(darkButton->isChecked(), targetThemeName == "FreeCAD Dark");
+        QCOMPARE(lightButton->isChecked(), targetThemeName == "FreeCAD Light");
     }
 
     void wordmarkStaysPopulatedOnStyleRefresh()  // NOLINT

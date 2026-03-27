@@ -64,6 +64,10 @@ SET(StartGui_SRCS
         PreCompiled.h
         StartView.cpp
         StartView.h
+        StartupWizardController.cpp
+        StartupWizardController.h
+        StartupWizardOverlay.cpp
+        StartupWizardOverlay.h
         ThemeSelectorWidget.cpp
         ThemeSelectorWidget.h
         )
