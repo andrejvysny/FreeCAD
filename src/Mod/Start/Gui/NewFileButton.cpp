@@ -21,6 +21,7 @@
  *                                                                          *
  ***************************************************************************/
 
+#include <QCursor>
 #include <QLabel>
 #include <QFont>
 #include <QIcon>
@@ -34,13 +35,15 @@
 namespace StartGui
 {
 
-NewFileButton::NewFileButton(const NewButton& newButton)
-    : mainLayout(new QHBoxLayout(this))
+NewFileButton::NewFileButton(const NewButton& newButton, bool compact)
+    : isCompact(compact)
+    , mainLayout(new QHBoxLayout(this))
     , textLayout(new QVBoxLayout())
     , headingLabel(new QLabel())
     , descriptionLabel(new QLabel())
 {
     setObjectName(QStringLiteral("newFileButton"));
+    setCursor(Qt::PointingHandCursor);
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
@@ -49,7 +52,8 @@ NewFileButton::NewFileButton(const NewButton& newButton)
     labelWidth = int(hGrp->GetInt("FileCardLabelWith", defaultWidth));
 
     constexpr int defaultSize = 48;
-    iconSize = int(hGrp->GetInt("NewFileIconSize", defaultSize));
+    constexpr int compactIconSize = 32;
+    iconSize = isCompact ? compactIconSize : int(hGrp->GetInt("NewFileIconSize", defaultSize));
 
     auto iconLabel = new QLabel(this);
     QIcon baseIcon(newButton.iconPath);
@@ -74,16 +78,37 @@ NewFileButton::NewFileButton(const NewButton& newButton)
     mainLayout->addWidget(iconLabel);
     mainLayout->addLayout(textLayout);
     mainLayout->addStretch();
-    QFontMetrics qfm(font);
-    int margin = qfm.height() / 2;
-    mainLayout->setSpacing(margin);
-    mainLayout->setContentsMargins(margin, margin, 2 * margin, margin);
+
+    if (isCompact) {
+        descriptionLabel->hide();
+        mainLayout->setSpacing(8);
+        mainLayout->setContentsMargins(10, 8, 16, 8);
+        setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    }
+    else {
+        QFontMetrics qfm(font);
+        int margin = qfm.height() / 2;
+        mainLayout->setSpacing(margin);
+        mainLayout->setContentsMargins(margin, margin, 2 * margin, margin);
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    }
+
     setLayout(mainLayout);
-    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 }
 
 QSize NewFileButton::minimumSizeHint() const
 {
+    if (isCompact) {
+        int minWidth = iconSize + headingLabel->sizeHint().width()
+            + mainLayout->contentsMargins().left() + mainLayout->contentsMargins().right()
+            + mainLayout->spacing();
+
+        int minHeight = std::max(iconSize, headingLabel->sizeHint().height())
+            + mainLayout->contentsMargins().top() + mainLayout->contentsMargins().bottom();
+
+        return {minWidth, minHeight};
+    }
+
     int minWidth = labelWidth + iconSize + mainLayout->contentsMargins().left()
         + mainLayout->contentsMargins().right() + mainLayout->spacing();
 

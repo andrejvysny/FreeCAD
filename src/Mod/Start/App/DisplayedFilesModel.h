@@ -42,7 +42,8 @@ enum class DisplayedFilesModelRoles
     description,
     company,
     license,
-    path
+    path,
+    pinned
 };
 
 using FileStats = std::map<DisplayedFilesModelRoles, std::string>;

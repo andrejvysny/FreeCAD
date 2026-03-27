@@ -25,17 +25,18 @@
 #include <QFileIconProvider>
 #include <QImageReader>
 #include <QPainter>
+#include <QPen>
 #include <QStyleOptionViewItem>
 #include <QLabel>
 #include <QModelIndex>
 #include <QVBoxLayout>
 #include <QApplication>
-#include <QPushButton>
 #include <QString>
 #include <QAbstractItemView>
 
 #include "FileCardDelegate.h"
 #include "../App/DisplayedFilesModel.h"
+#include "../App/FileUtilities.h"
 #include "App/Application.h"
 #include <Base/Color.h>
 #include <Base/Console.h>
@@ -68,37 +69,121 @@ FileCardDelegate::FileCardDelegate(QObject* parent)
     }
 }
 
+bool FileCardDelegate::isDarkTheme() const
+{
+    auto mainWindowGrp = App::GetApplication().GetParameterGroupByPath(
+        "User parameter:BaseApp/Preferences/MainWindow");
+    auto theme = QString::fromStdString(mainWindowGrp->GetASCII("Theme", "Classic"));
+    if (theme.contains(QLatin1String("Dark"), Qt::CaseInsensitive)) {
+        return true;
+    }
+    if (theme.contains(QLatin1String("Light"), Qt::CaseInsensitive)) {
+        return false;
+    }
+    // Fallback for "Classic" or unknown themes
+    QColor windowBg = qApp->palette().window().color();
+    double luminance = 0.299 * windowBg.redF() + 0.587 * windowBg.greenF() + 0.114 * windowBg.blueF();
+    return luminance < 0.5;
+}
+
+void FileCardDelegate::paintOpenFileCard(
+    QPainter* painter,
+    const QStyleOptionViewItem& option
+) const
+{
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing);
+
+    auto thumbnailSize = static_cast<int>(_parameterGroup->GetInt("FileThumbnailIconsSize", 128));
+    int spacing = static_cast<int>(_parameterGroup->GetInt("FileCardSpacing", 16));
+    QRect cardRect = option.rect.adjusted(0, 0, -spacing, -spacing);
+
+    bool isDark = isDarkTheme();
+
+    // Card background fill
+    QColor cardBg = isDark ? QColor(0x38, 0x38, 0x38) : QColor(Qt::white);
+    painter->setBrush(cardBg);
+
+    // Dashed ghost card border
+    QColor dashedColor = isDark ? QColor(0x55, 0x55, 0x55) : QColor(0xD0, 0xD0, 0xD0);
+    if ((option.state & QStyle::State_MouseOver) != 0) {
+        dashedColor = QColor(0x41, 0x8F, 0xDE);  // Tufts Blue on hover
+        dashedColor.setAlphaF(0.6);
+    }
+    QPen dashedPen(dashedColor);
+    dashedPen.setStyle(Qt::DashLine);
+    dashedPen.setWidth(2);
+    painter->setPen(dashedPen);
+    painter->drawRoundedRect(cardRect.adjusted(3, 3, -3, -3), cardRadius, cardRadius);
+
+    // Draw "+" icon in Tufts Blue
+    QRect thumbnailRect(cardRect.x() + margin, cardRect.y() + margin, thumbnailSize, thumbnailSize);
+    int plusSize = 48;
+    QRect plusRect(0, 0, plusSize, plusSize);
+    plusRect.moveCenter(thumbnailRect.center());
+
+    QFont plusFont = painter->font();
+    plusFont.setPixelSize(36);
+    plusFont.setWeight(QFont::Light);
+    painter->setFont(plusFont);
+    painter->setPen(QColor(0x41, 0x8F, 0xDE));  // Tufts Blue
+    painter->drawText(plusRect, Qt::AlignCenter, QStringLiteral("+"));
+
+    // Draw "Open file..." text in secondary color
+    QColor textColor = option.palette.text().color();
+    textColor.setAlphaF(0.6);
+    painter->setPen(textColor);
+    QRect textRect(
+        cardRect.x() + margin,
+        thumbnailRect.bottom() + margin,
+        thumbnailSize,
+        painter->fontMetrics().lineSpacing()
+    );
+    painter->setFont(QGuiApplication::font());
+    painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Open file..."));
+
+    painter->restore();
+}
+
 void FileCardDelegate::paint(
     QPainter* painter,
     const QStyleOptionViewItem& option,
     const QModelIndex& index
 ) const
 {
-    painter->save();
-    // Step 1: Styling
-    QStyleOptionButton buttonOption;
-    buttonOption.initFrom(option.widget);
-    buttonOption.rect = option.rect;
-    buttonOption.state = QStyle::State_Enabled;
+    auto path = index.data(static_cast<int>(DisplayedFilesModelRoles::path)).toString();
 
+    // Handle sentinel "Open file..." card
+    if (path == QLatin1String("__open_file_dialog__")) {
+        paintOpenFileCard(painter, option);
+        return;
+    }
+
+    painter->save();
+    // Step 1: Compute card rect (spacing baked into sizeHint, card fills top-left)
+    painter->setRenderHint(QPainter::Antialiasing);
+    int spacing = static_cast<int>(_parameterGroup->GetInt("FileCardSpacing", 16));
+    QRect cardRect = option.rect.adjusted(0, 0, -spacing, -spacing);
+
+    bool isDark = isDarkTheme();
+
+    // Card background and border with theme-aware colors
+    QColor cardBg = isDark ? QColor(0x38, 0x38, 0x38) : QColor(Qt::white);
+    QColor borderColor = isDark ? QColor(0x55, 0x55, 0x55) : QColor(0xD0, 0xD0, 0xD0);
     if ((option.state & QStyle::State_MouseOver) != 0) {
-        buttonOption.state |= QStyle::State_MouseOver;
+        cardBg = isDark ? QColor(0x42, 0x42, 0x42) : QColor(0xF5, 0xF5, 0xF5);
+        borderColor = QColor(0x41, 0x8F, 0xDE);  // Tufts Blue on hover
+        borderColor.setAlphaF(0.6);
     }
-    if ((option.state & QStyle::State_Selected) != 0) {
-        buttonOption.state |= QStyle::State_On;
-    }
-    if ((option.state & QStyle::State_Sunken) != 0) {
-        buttonOption.state |= QStyle::State_Sunken;
-    }
-    qApp->style()->drawControl(QStyle::CE_PushButton, &buttonOption, painter, &styleButton);
+    painter->setBrush(cardBg);
+    painter->setPen(QPen(borderColor, 2));
+    painter->drawRoundedRect(cardRect.adjusted(3, 3, -3, -3), cardRadius, cardRadius);
 
     // Step 2: Fetch required data
     auto thumbnailSize = static_cast<int>(_parameterGroup->GetInt("FileThumbnailIconsSize", 128));  // NOLINT
     auto baseName = index.data(static_cast<int>(DisplayedFilesModelRoles::baseName)).toString();
-    auto elidedName = painter->fontMetrics().elidedText(baseName, Qt::ElideRight, thumbnailSize);
     auto size = index.data(static_cast<int>(DisplayedFilesModelRoles::size)).toString();
     auto image = index.data(static_cast<int>(DisplayedFilesModelRoles::image)).toByteArray();
-    auto path = index.data(static_cast<int>(DisplayedFilesModelRoles::path)).toString();
 
     QPixmap pixmap;
     if (!image.isEmpty()) {
@@ -114,28 +199,86 @@ void FileCardDelegate::paint(
         Qt::SmoothTransformation
     );
 
-    // Step 4: Positioning
-    QRect thumbnailRect(option.rect.x() + margin, option.rect.y() + margin, thumbnailSize, thumbnailSize);
+    // Step 3: Positioning
+    QRect thumbnailRect(cardRect.x() + margin, cardRect.y() + margin, thumbnailSize, thumbnailSize);
+
+    // Draw thumbnail background area
+    QColor thumbBg = isDark ? QColor(0x2E, 0x2E, 0x2E) : QColor(0xF0, 0xF0, 0xF0);
+    painter->setBrush(thumbBg);
+    painter->setPen(Qt::NoPen);
+    painter->drawRoundedRect(thumbnailRect.adjusted(-4, -4, 4, 4), 8, 8);
+
+    // Determine text start X and available width (may shift for pinned indicator)
+    int textX = cardRect.x() + margin;
+    int textWidth = thumbnailSize;
+    constexpr int pinDotSize = 8;
+    constexpr int pinDotMargin = 6;
+
+    bool isPinned = false;
+    if (_showPinnedIndicator) {
+        isPinned = index.data(static_cast<int>(DisplayedFilesModelRoles::pinned)).toBool();
+    }
+
+    if (isPinned) {
+        textX += pinDotSize + pinDotMargin;
+        textWidth -= pinDotSize + pinDotMargin;
+    }
+
+    auto elidedName = painter->fontMetrics().elidedText(baseName, Qt::ElideRight, textWidth);
+
     QRect textRect(
-        option.rect.x() + margin,
+        textX,
         thumbnailRect.bottom() + margin,
-        thumbnailSize,
+        textWidth,
         painter->fontMetrics().lineSpacing()
     );
 
+    // Build size + timestamp string
+    QString sizeAndTime = size;
+    if (_showTimestamp) {
+        auto modifiedTime = index.data(static_cast<int>(DisplayedFilesModelRoles::modifiedTime)).toString();
+        auto relTime = relativeTimeString(modifiedTime);
+        if (!relTime.isEmpty() && !size.isEmpty()) {
+            sizeAndTime = size + QStringLiteral(" \u00B7 ") + relTime;  // " · "
+        }
+        else if (!relTime.isEmpty()) {
+            sizeAndTime = relTime;
+        }
+    }
+
+    int textAvailableWidth = cardRect.width() - 2 * margin;
     QRect sizeRect(
-        option.rect.x() + margin,
+        cardRect.x() + margin,
         textRect.bottom() + textspacing,
-        thumbnailSize,
+        textAvailableWidth,
         painter->fontMetrics().lineSpacing() + margin
     );
 
-    // Step 5: Draw
+    // Step 4: Draw
     QRect pixmapRect(thumbnailRect.topLeft(), scaledPixmap.size());
     pixmapRect.moveCenter(thumbnailRect.center());
     painter->drawPixmap(pixmapRect.topLeft(), scaledPixmap);
+
+    // Draw pinned indicator (blue dot) before filename
+    if (isPinned) {
+        QColor accentColor = option.palette.highlight().color();
+        painter->setBrush(accentColor);
+        painter->setPen(Qt::NoPen);
+        int dotY = textRect.center().y() - pinDotSize / 2;
+        painter->drawEllipse(cardRect.x() + margin, dotY, pinDotSize, pinDotSize);
+        painter->setPen(option.palette.text().color());
+    }
+
     painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedName);
-    painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignTop, size);
+
+    // Draw size/timestamp in slightly lighter color (with proper eliding)
+    QColor sizeColor = option.palette.text().color();
+    sizeColor.setAlphaF(0.6);
+    painter->setPen(sizeColor);
+    auto elidedSizeAndTime = painter->fontMetrics().elidedText(
+        sizeAndTime, Qt::ElideRight, textAvailableWidth);
+    painter->drawText(sizeRect, Qt::AlignLeft | Qt::AlignTop, elidedSizeAndTime);
+
     painter->restore();
 }
 
@@ -146,13 +289,14 @@ QSize FileCardDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
     Q_UNUSED(index);
 
     auto thumbnailSize = _parameterGroup->GetInt("FileThumbnailIconsSize", 128);  // NOLINT
+    int spacing = static_cast<int>(_parameterGroup->GetInt("FileCardSpacing", 16));
 
     QFontMetrics qfm(QGuiApplication::font());
-    int textHeight = textspacing + qfm.lineSpacing() * 2;  // name + size
+    int textHeight = textspacing + qfm.lineSpacing() * 2;  // name + size/timestamp
     int cardWidth = static_cast<int>(thumbnailSize) + 2 * margin;
     int cardHeight = static_cast<int>(thumbnailSize) + textHeight + 3 * margin;
 
-    return {cardWidth, cardHeight};
+    return {cardWidth + spacing, cardHeight + spacing};
 }
 
 QPixmap FileCardDelegate::generateThumbnail(const QString& path) const

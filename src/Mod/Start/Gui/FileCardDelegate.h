@@ -28,7 +28,6 @@
 #include <QEvent>
 #include <QFileInfo>
 #include <QImage>
-#include <QPushButton>
 #include <QStyledItemDelegate>
 
 class FileCardDelegate: public QStyledItemDelegate
@@ -45,17 +44,26 @@ public:
 
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
+    void setShowTimestamp(bool show) { _showTimestamp = show; }
+    void setShowPinnedIndicator(bool show) { _showPinnedIndicator = show; }
+
 protected:
     QPixmap generateThumbnail(const QString& path) const;
 
 private:
+    void paintOpenFileCard(QPainter* painter, const QStyleOptionViewItem& option) const;
+
+    bool isDarkTheme() const;
     QString getCacheKey(const QString& path, int thumbnailSize) const;
     QPixmap loadAndCacheThumbnail(const QString& path, int thumbnailSize) const;
 
     Base::Reference<ParameterGrp> _parameterGroup;
-    const int margin = 11;
-    const int textspacing = 2;
-    QPushButton styleButton;
+    static constexpr int margin = 11;
+    static constexpr int textspacing = 2;
+    static constexpr int cardRadius = 12;
+
+    bool _showTimestamp = false;
+    bool _showPinnedIndicator = false;
 
     static QCache<QString, QPixmap> _thumbnailCache;  // cache key structure: "path:modtime:size"
     static constexpr const int CACHE_SIZE_MB = 50;    // 50MB cache limit

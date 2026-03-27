@@ -75,15 +75,24 @@ void GeneralSettingsWidget::setupUi()
 void GeneralSettingsWidget::createHorizontalUi()
 {
     auto mainLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout(this));
-    const int extraSpace {36};
-    mainLayout->addWidget(_languageLabel);
-    mainLayout->addWidget(_languageComboBox);
-    mainLayout->addSpacing(extraSpace);
-    mainLayout->addWidget(_unitSystemLabel);
-    mainLayout->addWidget(_unitSystemComboBox);
-    mainLayout->addSpacing(extraSpace);
-    mainLayout->addWidget(_navigationStyleLabel);
-    mainLayout->addWidget(_navigationStyleComboBox);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(24);
+
+    auto addSettingColumn = [&](QLabel* label, QComboBox* combo) {
+        auto col = gsl::owner<QVBoxLayout*>(new QVBoxLayout);
+        col->setSpacing(4);
+        QFont boldFont = label->font();
+        boldFont.setBold(true);
+        label->setFont(boldFont);
+        col->addWidget(label);
+        combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        col->addWidget(combo);
+        mainLayout->addLayout(col);
+    };
+
+    addSettingColumn(_languageLabel, _languageComboBox);
+    addSettingColumn(_unitSystemLabel, _unitSystemComboBox);
+    addSettingColumn(_navigationStyleLabel, _navigationStyleComboBox);
 }
 
 
@@ -219,8 +228,8 @@ bool GeneralSettingsWidget::eventFilter(QObject* object, QEvent* event)
 
 void GeneralSettingsWidget::retranslateUi()
 {
-    _languageLabel->setText(createLabelText(tr("Language")));
-    _unitSystemLabel->setText(createLabelText(tr("Unit System")));
+    _languageLabel->setText(tr("Language"));
+    _unitSystemLabel->setText(tr("Unit System"));
 
     _unitSystemComboBox->clear();
 
@@ -237,7 +246,7 @@ void GeneralSettingsWidget::retranslateUi()
 
     _unitSystemComboBox->setCurrentIndex(userSchema);
 
-    _navigationStyleLabel->setText(createLabelText(tr("Navigation Style")));
+    _navigationStyleLabel->setText(tr("Navigation Style"));
     _navigationStyleComboBox->clear();
     ParameterGrp::handle hGrpNav = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/View"

@@ -44,9 +44,10 @@ struct NewButton
 class NewFileButton: public QPushButton
 {
 public:
-    explicit NewFileButton(const NewButton& newButton);
+    explicit NewFileButton(const NewButton& newButton, bool compact = false);
 
 private:
+    bool isCompact;
     int iconSize;
     int labelWidth;
     QHBoxLayout* mainLayout;

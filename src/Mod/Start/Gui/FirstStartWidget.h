@@ -24,35 +24,72 @@
 #pragma once
 
 #include <QWidget>
-#include <QGroupBox>
 
 class QLabel;
-class QPushButton;
+class QPaintEvent;
+class QStackedWidget;
 
 namespace StartGui
 {
 
-class ThemeSelectorWidget;
-class GeneralSettingsWidget;
+/// Returns true if the current FreeCAD theme is dark
+bool isWizardDarkMode();
 
-class FirstStartWidget: public QGroupBox
+class StepIndicatorWidget;
+class WizardFooter;
+class WizardBasicsPage;
+class WizardWorkflowPage;
+class WizardCommunityPage;
+class WizardSummaryPage;
+
+/// 4-step interactive setup wizard shown on first launch.
+/// Contains WizardBasicsPage, WizardWorkflowPage, WizardCommunityPage, and WizardSummaryPage.
+class FirstStartWidget: public QWidget
 {
     Q_OBJECT
+
 public:
     explicit FirstStartWidget(QWidget* parent = nullptr);
     bool eventFilter(QObject* object, QEvent* event) override;
+
+    /// Reset wizard to step 0 (called on reopen from footer)
+    void resetToFirstStep();
+
     Q_SIGNAL void dismissed();
 
+    void applyThemeColors();
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
+
 private:
-    void retranslateUi();
     void setupUi();
+    void retranslateUi();
+    void goToStep(int step);
+    void updateHeader();
 
-    ThemeSelectorWidget* _themeSelectorWidget;
-    GeneralSettingsWidget* _generalSettingsWidget;
+    static constexpr int totalSteps = 4;
+    static constexpr int StepBasics = 0;
+    static constexpr int StepWorkflow = 1;
+    static constexpr int StepCommunity = 2;
+    static constexpr int StepSummary = 3;
+    int _currentStep = 0;
 
-    QLabel* _welcomeLabel;
-    QLabel* _descriptionLabel;
-    QPushButton* _doneButton;
+    // Header
+    QLabel* _titleLabel = nullptr;
+    QLabel* _subtitleLabel = nullptr;
+    StepIndicatorWidget* _stepIndicator = nullptr;
+
+    // Pages
+    QStackedWidget* _stepsWidget = nullptr;
+    WizardBasicsPage* _basicsPage = nullptr;
+    WizardWorkflowPage* _workflowPage = nullptr;
+    WizardCommunityPage* _communityPage = nullptr;
+    WizardSummaryPage* _summaryPage = nullptr;
+
+    // Footer
+    WizardFooter* _footer = nullptr;
 };
 
 }  // namespace StartGui

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">
+  <!-- Dark theme preview -->
+  <rect width="200" height="120" rx="8" fill="#2d2d2d"/>
+  <!-- Toolbar -->
+  <rect x="0" y="0" width="200" height="24" rx="8" fill="#383838"/>
+  <rect x="8" y="8" width="40" height="8" rx="2" fill="#555"/>
+  <rect x="56" y="8" width="30" height="8" rx="2" fill="#555"/>
+  <!-- Sidebar -->
+  <rect x="0" y="24" width="48" height="96" fill="#333"/>
+  <!-- Accent dots -->
+  <circle cx="24" cy="44" r="4" fill="#5B9BD5"/>
+  <circle cx="24" cy="60" r="4" fill="#666"/>
+</svg>

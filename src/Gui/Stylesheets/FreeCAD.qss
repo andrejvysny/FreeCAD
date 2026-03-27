@@ -2646,6 +2646,13 @@ QMdiSubWindow:active {
 /*==================================================================================================
 Start page
 ==================================================================================================*/
+/* Override Gui--MDIView QScrollArea border for Start page scroll areas */
+QScrollArea#startLeftScrollArea,
+QScrollArea#startRightScrollArea {
+  border: none;
+  background-color: transparent;
+}
+
 QWidget#thumbnailWidget {
   background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 @ButtonTopBackgroundColor,stop:1 @ButtonBottomBackgroundColor);
   border-radius: 8px;
@@ -2658,6 +2665,100 @@ QWidget#thumbnailWidget[state="hovered"] {
 
 QWidget#thumbnailWidget[state="pressed"] {
   border: 1px solid @AccentColor;
+}
+
+/* Start page tagline */
+QLabel#startHeaderTagline {
+  color: @TextDisabledColor;
+  font-size: 13px;
+  padding-top: 2px;
+}
+
+/* Start page section labels */
+QLabel#startSectionLabel {
+  color: @TextForegroundColor;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 0;
+}
+
+/* Vertical sidebar divider */
+QFrame#startSidebarDivider {
+  background-color: @GeneralBorderColor;
+  border: none;
+  min-width: 1px;
+  max-width: 1px;
+}
+
+/* Version label in footer */
+QLabel#startVersionLabel {
+  color: @TextDisabledColor;
+  font-size: 11px;
+}
+
+/* Getting started info card */
+QFrame#gettingStartedCard {
+  background-color: rgba(65, 143, 222, 0.1);
+  border: none;
+  border-radius: 16px;
+  padding: 14px 20px;
+  color: @AccentColor;
+}
+
+QFrame#gettingStartedCard QLabel {
+  color: @AccentColor;
+}
+
+/* Getting started dismiss button — transparent by default, revealed on card hover */
+QPushButton#gettingStartedCloseBtn {
+  border: none;
+  background: transparent;
+  color: transparent;
+  font-size: 16px;
+  padding: 0;
+}
+
+QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn {
+  color: @AccentColor;
+}
+
+QFrame#gettingStartedCard:hover QPushButton#gettingStartedCloseBtn:hover {
+  color: @TextForegroundColor;
+}
+
+/* Compact new file pill buttons — match file card border style */
+#CreateNewRow > QPushButton#newFileButton {
+  border-radius: 12px;
+  border: 2px solid rgba(128, 128, 128, 0.35);
+  padding: 8px 16px;
+  background-color: @TextEditFieldBackgroundColor;
+}
+
+#CreateNewRow > QPushButton#newFileButton:hover {
+  border: 2px solid rgba(65, 143, 222, 0.6);
+  background-color: @GeneralBackgroundHoverColor;
+}
+
+/* Sidebar examples list */
+QListView#examplesListView {
+  background-color: transparent;
+  border: none;
+
+}
+
+/* Learn section links */
+QPushButton#learnLink {
+  text-align: left;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: @AccentColor;
+
+}
+
+QPushButton#learnLink:hover {
+  color: @AccentColor;
+  text-decoration: underline;
 }
 
 /**

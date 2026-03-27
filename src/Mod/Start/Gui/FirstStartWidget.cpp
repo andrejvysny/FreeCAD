@@ -21,32 +21,39 @@
  *                                                                          *
  ***************************************************************************/
 
-
+#include <QFont>
 #include <QGuiApplication>
-#include <QHBoxLayout>
 #include <QLabel>
-#include <QPushButton>
-#include <QResizeEvent>
+#include <QPainter>
+#include <QPainterPath>
+#include <QStackedWidget>
 #include <QVBoxLayout>
-#include <QWidget>
-
 
 #include "FirstStartWidget.h"
-#include "ThemeSelectorWidget.h"
-#include "GeneralSettingsWidget.h"
+#include "SelectionCard.h"
+#include "StepIndicatorWidget.h"
+#include "WizardFooter.h"
+#include "WizardBasicsPage.h"
+#include "WizardWorkflowPage.h"
+#include "WizardCommunityPage.h"
+#include "WizardSummaryPage.h"
 
 #include <App/Application.h>
-#include <gsl/pointers>
+#include <Base/Parameter.h>
 
 using namespace StartGui;
 
+bool StartGui::isWizardDarkMode()
+{
+    auto hGrp = App::GetApplication().GetParameterGroupByPath(
+        "User parameter:BaseApp/Preferences/MainWindow"
+    );
+    auto styleSheet = QString::fromStdString(hGrp->GetASCII("StyleSheet", ""));
+    return styleSheet.contains(QLatin1String("Dark"), Qt::CaseInsensitive);
+}
+
 FirstStartWidget::FirstStartWidget(QWidget* parent)
-    : QGroupBox(parent)
-    , _themeSelectorWidget {nullptr}
-    , _generalSettingsWidget {nullptr}
-    , _welcomeLabel {nullptr}
-    , _descriptionLabel {nullptr}
-    , _doneButton {nullptr}
+    : QWidget(parent)
 {
     setObjectName(QLatin1String("FirstStartWidget"));
     setupUi();
@@ -55,46 +62,236 @@ FirstStartWidget::FirstStartWidget(QWidget* parent)
 
 void FirstStartWidget::setupUi()
 {
-    auto outerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
-    outerLayout->setAlignment(Qt::AlignCenter);
-    _welcomeLabel = gsl::owner<QLabel*>(new QLabel);
-    outerLayout->addWidget(_welcomeLabel);
-    _descriptionLabel = gsl::owner<QLabel*>(new QLabel);
-    outerLayout->addWidget(_descriptionLabel);
+    setMaximumWidth(750);
+    setMaximumHeight(700);
 
-    _themeSelectorWidget = gsl::owner<ThemeSelectorWidget*>(new ThemeSelectorWidget(this));
-    _generalSettingsWidget = gsl::owner<GeneralSettingsWidget*>(new GeneralSettingsWidget(this));
+    auto outerLayout = new QVBoxLayout(this);
+    outerLayout->setSpacing(12);
+    outerLayout->setContentsMargins(32, 24, 32, 24);
 
-    outerLayout->addWidget(_generalSettingsWidget);
-    outerLayout->addWidget(_themeSelectorWidget);
+    // Header: title + subtitle + step indicator
+    _titleLabel = new QLabel(this);
+    _titleLabel->setObjectName(QStringLiteral("wizardTitle"));
+    QFont titleFont = _titleLabel->font();
+    titleFont.setPointSize(18);
+    titleFont.setBold(true);
+    _titleLabel->setFont(titleFont);
+    outerLayout->addWidget(_titleLabel);
 
-    _doneButton = gsl::owner<QPushButton*>(new QPushButton);
-    connect(_doneButton, &QPushButton::clicked, this, &FirstStartWidget::dismissed);
-    auto buttonBar = gsl::owner<QHBoxLayout*>(new QHBoxLayout);
-    buttonBar->setAlignment(Qt::AlignRight);
-    buttonBar->addWidget(_doneButton);
-    outerLayout->addLayout(buttonBar);
+    _subtitleLabel = new QLabel(this);
+    _subtitleLabel->setObjectName(QStringLiteral("wizardSubtitle"));
+    _subtitleLabel->setWordWrap(true);
+    outerLayout->addWidget(_subtitleLabel);
 
+    _stepIndicator = new StepIndicatorWidget(totalSteps, this);
+    outerLayout->addWidget(_stepIndicator);
+
+    // Stacked pages
+    _stepsWidget = new QStackedWidget(this);
+
+    _basicsPage = new WizardBasicsPage(this);
+    _stepsWidget->addWidget(_basicsPage);
+
+    _workflowPage = new WizardWorkflowPage(this);
+    _stepsWidget->addWidget(_workflowPage);
+
+    _communityPage = new WizardCommunityPage(this);
+    _stepsWidget->addWidget(_communityPage);
+
+    _summaryPage = new WizardSummaryPage(this);
+    _stepsWidget->addWidget(_summaryPage);
+
+    outerLayout->addWidget(_stepsWidget);
+
+    // Footer
+    _footer = new WizardFooter(totalSteps, this);
+    outerLayout->addWidget(_footer);
+
+    connect(_footer, &WizardFooter::skipClicked, this, [this]() {
+        if (_currentStep == StepCommunity) {
+            goToStep(_currentStep + 1);
+        }
+        else {
+            Q_EMIT dismissed();
+        }
+    });
+    connect(_footer, &WizardFooter::backClicked, this, [this]() {
+        if (_currentStep > 0) {
+            goToStep(_currentStep - 1);
+        }
+    });
+    connect(_footer, &WizardFooter::nextClicked, this, [this]() {
+        if (_currentStep < totalSteps - 1) {
+            goToStep(_currentStep + 1);
+        }
+        else {
+            Q_EMIT dismissed();
+        }
+    });
+
+    applyThemeColors();
+    goToStep(0);
     retranslateUi();
+}
+
+void FirstStartWidget::applyThemeColors()
+{
+    bool dark = isWizardDarkMode();
+    QString textColor = dark ? QStringLiteral("#e0e0e0") : QStringLiteral("#333");
+    QString comboBg = dark ? QStringLiteral("#383838") : QStringLiteral("white");
+    QString comboBorder = dark ? QStringLiteral("#555") : QStringLiteral("#ccc");
+
+    setStyleSheet(QString(
+        "QWidget#FirstStartWidget * {"
+        "  background-color: transparent;"
+        "}"
+        "QWidget#FirstStartWidget QLabel {"
+        "  border: none;"
+        "  color: %1;"
+        "}"
+        "QWidget#FirstStartWidget QComboBox {"
+        "  background-color: %2;"
+        "  border: 1px solid %3;"
+        "  border-radius: 4px;"
+        "  padding: 4px 8px;"
+        "  color: %1;"
+        "}"
+    ).arg(textColor, comboBg, comboBorder));
+
+    // Update child widgets (guard against null during construction)
+    if (_stepIndicator) {
+        _stepIndicator->applyThemeColors();
+    }
+    if (_footer) {
+        _footer->applyThemeColors();
+    }
+
+    // Update all SelectionCards in all pages
+    auto cards = findChildren<SelectionCard*>();
+    for (auto* card : cards) {
+        card->updateStyle();
+    }
+
+    // Update community page
+    if (_communityPage) {
+        _communityPage->applyThemeColors();
+    }
+
+    // Update summary cells
+    if (_summaryPage) {
+        _summaryPage->applyThemeColors();
+    }
+
+    update();  // trigger paintEvent repaint
+}
+
+void FirstStartWidget::paintEvent(QPaintEvent* /*event*/)
+{
+    bool dark = isWizardDarkMode();
+    QColor bg = dark ? QColor(45, 45, 45) : Qt::white;
+    QColor border = dark ? QColor(85, 85, 85) : QColor(208, 208, 208);
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    QPainterPath path;
+    path.addRoundedRect(rect(), 16, 16);
+    painter.fillPath(path, bg);
+
+    painter.setPen(QPen(border, 1));
+    painter.drawPath(path);
+}
+
+void FirstStartWidget::changeEvent(QEvent* event)
+{
+    // Note: do NOT call applyThemeColors() here — setStyleSheet() triggers StyleChange
+    // which causes infinite recursion. Theme updates are triggered explicitly from
+    // WizardBasicsPage::onThemeCardClicked() via QTimer::singleShot.
+    QWidget::changeEvent(event);
+}
+
+void FirstStartWidget::goToStep(int step)
+{
+    _currentStep = step;
+    _stepsWidget->setCurrentIndex(step);
+    _stepIndicator->setCurrentStep(step);
+    _footer->setStep(step);
+    updateHeader();
+
+    // Contextual skip button text
+    if (step == StepCommunity) {
+        _footer->setSkipText(tr("Skip this step"));
+    }
+    else {
+        _footer->setSkipText(tr("Skip setup"));
+    }
+
+    if (step == StepSummary && _summaryPage) {
+        _summaryPage->refreshSummary();
+    }
+}
+
+void FirstStartWidget::resetToFirstStep()
+{
+    goToStep(0);
+}
+
+void FirstStartWidget::updateHeader()
+{
+    QString application = QString::fromStdString(App::Application::getExecutableName());
+
+    switch (_currentStep) {
+        case StepBasics:
+            _titleLabel->setText(tr("Welcome to %1").arg(application));
+            _subtitleLabel->setText(
+                tr("Set your preferences below.") + QLatin1String(" ")
+                + tr("You can change everything later in Edit > Preferences.")
+            );
+            break;
+        case StepWorkflow:
+            _titleLabel->setText(tr("Your workflow"));
+            _subtitleLabel->setText(
+                tr("Help us tailor %1 to your experience level.").arg(application)
+            );
+            break;
+        case StepCommunity:
+            _titleLabel->setText(tr("Community"));
+            _subtitleLabel->setText(
+                tr("FreeCAD is built by volunteers. Here's one way you can contribute.")
+            );
+            break;
+        case StepSummary:
+            _titleLabel->setText(tr("You're all set"));
+            _subtitleLabel->setText(
+                tr("Here's a summary.") + QLatin1String(" ")
+                + tr("Change anything later in Edit > Preferences.")
+            );
+            break;
+    }
 }
 
 bool FirstStartWidget::eventFilter(QObject* object, QEvent* event)
 {
     if (object == this && event->type() == QEvent::LanguageChange) {
-        this->retranslateUi();
+        retranslateUi();
     }
     return QWidget::eventFilter(object, event);
 }
 
 void FirstStartWidget::retranslateUi()
 {
-    _doneButton->setText(tr("Done"));
-    QString application = QString::fromStdString(App::Application::getExecutableName());
-    _welcomeLabel->setText(
-        QLatin1String("<h1>") + tr("Welcome to %1").arg(application) + QLatin1String("</h1>")
-    );
-    _descriptionLabel->setText(
-        tr("Set your basic configuration options below.") + QLatin1String(" ")
-        + tr("These options (and many more) can be changed later in the preferences.")
-    );
+    updateHeader();
+    _footer->retranslateUi();
+    if (_basicsPage) {
+        _basicsPage->retranslateUi();
+    }
+    if (_workflowPage) {
+        _workflowPage->retranslateUi();
+    }
+    if (_communityPage) {
+        _communityPage->retranslateUi();
+    }
+    if (_summaryPage) {
+        _summaryPage->retranslateUi();
+    }
 }

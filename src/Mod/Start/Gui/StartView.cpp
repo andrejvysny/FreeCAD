@@ -26,11 +26,17 @@
 #include <QCheckBox>
 #include <QFrame>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
 #include <QMdiSubWindow>
+#include <QMenu>
 #include <QMessageBox>
+#include <QCursor>
+#include <QPalette>
+#include <QPixmap>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QTimer>
 #include <QWidget>
@@ -38,11 +44,15 @@
 #include <QShowEvent>
 
 #include "StartView.h"
+#include "ExamplesListDelegate.h"
 #include "FileCardDelegate.h"
 #include "FileCardView.h"
 #include "FirstStartWidget.h"
 #include "FlowLayout.h"
+#include "GettingStartedCard.h"
+#include "LearnLinksWidget.h"
 #include "NewFileButton.h"
+#include "OpenFileProxyModel.h"
 #include <App/DocumentObject.h>
 #include <App/Application.h>
 #include <Base/Interpreter.h>
@@ -63,108 +73,234 @@ using namespace StartGui;
 TYPESYSTEM_SOURCE_ABSTRACT(StartGui::StartView, Gui::MDIView)  // NOLINT
 
 
+namespace
+{
+
+static constexpr int kPageMargin = 24;
+static constexpr int kTopMargin = 32;
+static constexpr int kBottomMargin = 16;
+static constexpr int kSectionSpacing = 16;
+
+QLabel* makeSectionLabel(const QString& text, QWidget* parent = nullptr)
+{
+    auto label = gsl::owner<QLabel*>(new QLabel(text, parent));
+    label->setObjectName(QStringLiteral("startSectionLabel"));
+    QFont font = label->font();
+    font.setBold(true);
+    label->setFont(font);
+    return label;
+}
+
+}  // namespace
+
+
 StartView::StartView(QWidget* parent)
     : Gui::MDIView(nullptr, parent)
     , _contents(new QStackedWidget(parent))
-    , _newFileLabel {nullptr}
-    , _examplesLabel {nullptr}
-    , _recentFilesLabel {nullptr}
-    , _customFolderLabel {nullptr}
-    , _showOnStartupCheckBox {nullptr}
 {
     setObjectName(QLatin1String("StartView"));
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    auto cardSpacing = hGrp->GetInt("FileCardSpacing", 15);  // NOLINT
+    auto cardSpacing = hGrp->GetInt("FileCardSpacing", 16);  // NOLINT
     auto showExamples = hGrp->GetBool("ShowExamples", true);
 
-    // Verify that the folder specified in preferences is available before showing it
     std::string customFolder(hGrp->GetASCII("CustomFolder", ""));
-    bool showCustomFolder = false;
-    if (!customFolder.empty()) {
-        showCustomFolder = true;
-    }
+    bool showCustomFolder = !customFolder.empty();
 
-    // First start page
-    auto firstStartScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
-    auto firstStartScrollWidget = gsl::owner<QWidget*>(new QWidget(firstStartScrollArea));
-    firstStartScrollArea->setWidget(firstStartScrollWidget);
-    firstStartScrollArea->setWidgetResizable(true);
+    // First Start wizard — created without parent, shown via MainWindow overlay
+    _firstStartWidget = new FirstStartWidget(nullptr);
+    connect(_firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
 
-    auto firstStartRegion = gsl::owner<QHBoxLayout*>(new QHBoxLayout(firstStartScrollWidget));
-    firstStartRegion->setAlignment(Qt::AlignCenter);
-    auto firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(this));
-    connect(firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
-    firstStartRegion->addWidget(firstStartWidget);
-    _contents->addWidget(firstStartScrollArea);
-
-    // Documents page
+    // =========================================================================
+    // Documents page — two-column layout (full height sidebar)
+    // =========================================================================
     auto documentsWidget = gsl::owner<QWidget*>(new QWidget());
     _contents->addWidget(documentsWidget);
-    auto documentsMainLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout());
-    documentsWidget->setLayout(documentsMainLayout);
-    auto documentsScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
-    documentsScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
-    documentsMainLayout->addWidget(documentsScrollArea);
-    auto documentsScrollWidget = gsl::owner<QWidget*>(new QWidget(documentsScrollArea));
-    documentsScrollArea->setWidget(documentsScrollWidget);
-    documentsScrollArea->setWidgetResizable(true);
-    auto documentsContentLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(documentsScrollWidget));
-    documentsContentLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinAndMaxSize);
 
-    _newFileLabel = gsl::owner<QLabel*>(new QLabel());
-    documentsContentLayout->addWidget(_newFileLabel);
+    // Read max content size preferences for centering on large screens
+    _maxContentWidth = static_cast<int>(hGrp->GetInt("MaxContentWidth", defaultMaxContentWidth));
+    _maxContentHeight = static_cast<int>(hGrp->GetInt("MaxContentHeight", defaultMaxContentHeight));
 
+    // Top-level: two-column HBox — margins set dynamically for centering
+    _bodyLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
+    _bodyLayout->setSpacing(0);
+    _bodyLayout->setContentsMargins(0, 0, 0, 0);
+    documentsWidget->setLayout(_bodyLayout);
+
+    // ---- Left column (scrollable main content) ----
+    _leftScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
+    _leftScrollArea->setObjectName(QStringLiteral("startLeftScrollArea"));
+    _leftScrollArea->setFrameShape(QFrame::NoFrame);
+    _leftScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
+    _leftScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    _leftScrollArea->setWidgetResizable(true);
+    _leftContentWidget = gsl::owner<QWidget*>(new QWidget(_leftScrollArea));
+    _leftScrollArea->setWidget(_leftContentWidget);
+    _leftContentLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_leftContentWidget));
+    _leftContentLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinAndMaxSize);
+    _leftContentLayout->setContentsMargins(kPageMargin, kTopMargin, kPageMargin, kBottomMargin);
+
+    // Wordmark header (first row in left column)
+    _wordmarkLabel = gsl::owner<QLabel*>(new QLabel());
+    _wordmarkLabel->setFixedHeight(72);
+    _wordmarkLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    updateWordmark();
+    _leftContentLayout->addWidget(_wordmarkLabel);
+    _leftContentLayout->addSpacing(kSectionSpacing);
+
+    // Version label (shown in footer, set by retranslateUi)
+    _headerLabel = gsl::owner<QLabel*>(new QLabel());
+    _headerLabel->setObjectName(QStringLiteral("startVersionLabel"));
+    // Tagline label (unused, kept for retranslateUi compat)
+    _headerTaglineLabel = gsl::owner<QLabel*>(new QLabel());
+    _headerTaglineLabel->hide();
+
+
+    // RECENT FILES section (flat, no card)
+    _recentFilesLabel = makeSectionLabel(QString());
+    _leftContentLayout->addWidget(_recentFilesLabel);
+    _recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
+    _recentFilesListWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    _recentFilesListWidget->setCursor(Qt::PointingHandCursor);
+    connect(_recentFilesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
+    connect(_recentFilesListWidget, &QWidget::customContextMenuRequested, this, &StartView::fileCardContextMenu);
+    _leftContentLayout->addWidget(_recentFilesListWidget);
+
+    // CREATE NEW section (flat, no card)
+    _createNewLabel = makeSectionLabel(QString());
+    _leftContentLayout->addWidget(_createNewLabel);
     auto createNewRow = gsl::owner<QWidget*>(new QWidget);
     auto flowLayout = gsl::owner<FlowLayout*>(new FlowLayout);
-
-    // Reset margins of layout to provide consistent spacing
     flowLayout->setContentsMargins({});
-
-    // This allows new file widgets to be targeted via QSS
     createNewRow->setObjectName(QStringLiteral("CreateNewRow"));
     createNewRow->setLayout(flowLayout);
+    _leftContentLayout->addWidget(createNewRow);
+    configureNewFileButtons(flowLayout, true);
 
-    documentsContentLayout->addWidget(createNewRow);
-    configureNewFileButtons(flowLayout);
-
-    _recentFilesLabel = gsl::owner<QLabel*>(new QLabel());
-    documentsContentLayout->addWidget(_recentFilesLabel);
-    auto recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
-    connect(recentFilesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
-    documentsContentLayout->addWidget(recentFilesListWidget);
-
+    // CUSTOM FOLDER section (preference-gated)
     FileCardView* customFolderListWidget {};
     if (showCustomFolder) {
+        _customFolderLabel = makeSectionLabel(QString());
+        _leftContentLayout->addWidget(_customFolderLabel);
         customFolderListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
-        _customFolderLabel = gsl::owner<QLabel*>(new QLabel());
-        documentsContentLayout->addWidget(_customFolderLabel);
-
         connect(customFolderListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
-        documentsContentLayout->addWidget(customFolderListWidget);
+        _leftContentLayout->addWidget(customFolderListWidget);
     }
 
-    FileCardView* examplesListWidget {};
+    // GETTING STARTED card (dismissible)
+    auto showGettingStarted = hGrp->GetBool("ShowGettingStarted", true);
+    _gettingStartedLabel = makeSectionLabel(QString());
+    _gettingStartedCard = gsl::owner<GettingStartedCard*>(new GettingStartedCard());
+    if (showGettingStarted) {
+        _leftContentLayout->addWidget(_gettingStartedLabel);
+        _leftContentLayout->addWidget(_gettingStartedCard);
+    }
+    else {
+        _gettingStartedLabel->hide();
+        _gettingStartedCard->hide();
+    }
+    connect(_gettingStartedCard, &GettingStartedCard::dismissed, this, [this]() {
+        _gettingStartedLabel->hide();
+        _gettingStartedCard->hide();
+        auto grp = App::GetApplication().GetParameterGroupByPath(
+            "User parameter:BaseApp/Preferences/Mod/Start");
+        grp->SetBool("ShowGettingStarted", false);
+    });
+
+    _leftContentLayout->setSpacing(static_cast<int>(cardSpacing));
+    _leftContentLayout->addStretch(1);
+
+    _bodyLayout->addWidget(_leftScrollArea, 7);
+
+    // ---- Vertical sidebar divider ----
+    _sidebarDivider = gsl::owner<QFrame*>(new QFrame());
+    _sidebarDivider->setObjectName(QStringLiteral("startSidebarDivider"));
+    _sidebarDivider->setFrameShape(QFrame::VLine);
+    _sidebarDivider->setFixedWidth(1);
+    _bodyLayout->addWidget(_sidebarDivider);
+
+    // ---- Right column (full-height sidebar) ----
+    _rightScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
+    _rightScrollArea->setObjectName(QStringLiteral("startRightScrollArea"));
+    auto rightScrollArea = _rightScrollArea;
+    rightScrollArea->setFrameShape(QFrame::NoFrame);
+    rightScrollArea->setWidgetResizable(true);
+    rightScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    rightScrollArea->setMinimumWidth(250);
+    rightScrollArea->setMaximumWidth(320);
+
+    _rightPanel = gsl::owner<QWidget*>(new QWidget());
+    rightScrollArea->setWidget(_rightPanel);
+    auto rightLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_rightPanel));
+    rightLayout->setSizeConstraint(QLayout::SizeConstraint::SetDefaultConstraint);
+    rightLayout->setContentsMargins(kPageMargin, kPageMargin, kPageMargin, kPageMargin);
+
+    // EXAMPLES section in sidebar (flat, no card)
+    _examplesContainer = gsl::owner<QFrame*>(new QFrame());
+    auto examplesLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_examplesContainer));
+    examplesLayout->setContentsMargins(0, 0, 0, 0);
+
+    _examplesSectionLabel = makeSectionLabel(QString());
+    examplesLayout->addWidget(_examplesSectionLabel);
+
+    QListView* examplesListWidget = nullptr;
     if (showExamples) {
-        examplesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
-        _examplesLabel = gsl::owner<QLabel*>(new QLabel());
-        documentsContentLayout->addWidget(_examplesLabel);
-
+        examplesListWidget = gsl::owner<QListView*>(new QListView());
+        examplesListWidget->setObjectName(QStringLiteral("examplesListView"));
+        examplesListWidget->setViewMode(QListView::ListMode);
+        examplesListWidget->setFlow(QListView::TopToBottom);
+        examplesListWidget->setFrameShape(QFrame::NoFrame);
+        examplesListWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        examplesListWidget->setMouseTracking(true);
+        examplesListWidget->setCursor(Qt::PointingHandCursor);
+        examplesListWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        auto examplesDelegate = gsl::owner<ExamplesListDelegate*>(new ExamplesListDelegate(examplesListWidget));
+        examplesListWidget->setItemDelegate(examplesDelegate);
         connect(examplesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
-        documentsContentLayout->addWidget(examplesListWidget);
+        examplesLayout->addWidget(examplesListWidget, 1);
     }
 
-    documentsContentLayout->setSpacing(static_cast<int>(cardSpacing));
-    documentsContentLayout->addStretch();
+    _browseExamplesButton = gsl::owner<QPushButton*>(new QPushButton());
+    _browseExamplesButton->setObjectName(QStringLiteral("learnLink"));
+    _browseExamplesButton->setFlat(true);
+    _browseExamplesButton->setCursor(Qt::PointingHandCursor);
+    _browseExamplesButton->setIcon(QIcon(QLatin1String(":/icons/document-open.svg")));
+    connect(_browseExamplesButton, &QPushButton::clicked, this, &StartView::openExistingFile);
+    examplesLayout->addWidget(_browseExamplesButton);
 
+    rightLayout->addWidget(_examplesContainer, 1);  // stretch to fill
 
-    // Documents page footer
+    // Stretch pushes Learn to bottom
+    rightLayout->addStretch();
+
+    // LEARN section at bottom of sidebar
+    _learnContainer = gsl::owner<QFrame*>(new QFrame());
+    auto learnContainerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_learnContainer));
+    learnContainerLayout->setContentsMargins(0, 0, 0, 0);
+
+    _learnSectionLabel = makeSectionLabel(QString());
+    learnContainerLayout->addWidget(_learnSectionLabel);
+
+    auto learnLinks = gsl::owner<LearnLinksWidget*>(new LearnLinksWidget());
+    learnContainerLayout->addWidget(learnLinks);
+
+    rightLayout->addWidget(_learnContainer);
+
+    _bodyLayout->addWidget(rightScrollArea, 3);
+
+    // --- Footer (inside left column, after stretch) ---
     auto footerLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
-    documentsMainLayout->addLayout(footerLayout);
+    _leftContentLayout->addLayout(footerLayout);
 
     _openFirstStart = gsl::owner<QPushButton*>(new QPushButton());
-    _openFirstStart->setIcon(QIcon(QLatin1String(":/icons/preferences-general.svg")));
+    _openFirstStart->setCursor(Qt::PointingHandCursor);
+    _openFirstStart->setFlat(true);
+    _openFirstStart->setStyleSheet(QStringLiteral(
+        "QPushButton { background: transparent; border: 1px solid rgba(128,128,128,0.35);"
+        "border-radius: 6px; padding: 4px 12px; color: rgba(0,0,0,0.55); font-size: 11px; }"
+        "QPushButton:hover { border-color: rgba(65,143,222,0.6); color: #418FDE; }"
+    ));
     connect(_openFirstStart, &QPushButton::clicked, this, &StartView::openFirstStartClicked);
 
     _showOnStartupCheckBox = gsl::owner<QCheckBox*>(new QCheckBox());
@@ -176,77 +312,87 @@ StartView::StartView(QWidget* parent)
 
     footerLayout->addWidget(_openFirstStart);
     footerLayout->addStretch();
+    footerLayout->addWidget(_headerLabel);
+    footerLayout->addStretch();
     footerLayout->addWidget(_showOnStartupCheckBox);
 
     setCentralWidget(_contents);
 
-    // Set startup widget according to the first start parameter
-    auto firstStart = hGrp->GetBool("FirstStart2024", true);
-    _contents->setCurrentWidget(firstStart ? firstStartScrollArea : documentsWidget);
+    // =========================================================================
+    // Configure models and page selection
+    // =========================================================================
+    // Set up proxy model for recent files (appends "Open file..." card)
+    _openFileProxyModel.setSourceModel(&_recentFilesModel);
+    configureRecentFilesListWidget(_recentFilesListWidget, _recentFilesLabel);
+
     if (customFolderListWidget) {
         configureCustomFolderListWidget(customFolderListWidget);
     }
     if (examplesListWidget) {
         configureExamplesListWidget(examplesListWidget);
     }
-    configureRecentFilesListWidget(recentFilesListWidget, _recentFilesLabel);
 
-    QTimer::singleShot(2000, [this, recentFilesListWidget]() {
-        auto updateFun = [this, recentFilesListWidget]() {
-            configureRecentFilesListWidget(recentFilesListWidget, _recentFilesLabel);
-        };
+    QTimer::singleShot(2000, [this]() {
         auto recentFiles = Gui::getMainWindow()->findChild<Gui::RecentFilesAction*>();
         if (recentFiles != nullptr) {
-            connect(recentFiles, &Gui::RecentFilesAction::recentFilesListModified, this, updateFun);
+            connect(recentFiles, &Gui::RecentFilesAction::recentFilesListModified, this, [this]() {
+                configureRecentFilesListWidget(_recentFilesListWidget, _recentFilesLabel);
+            });
         }
     });
 
     isInitialized = true;
-
     retranslateUi();
 }
 
-void StartView::configureNewFileButtons(QLayout* layout) const
+StartView::~StartView()
 {
-    auto newEmptyFile = gsl::owner<NewFileButton*>(new NewFileButton(
-        {tr("Empty File"),
-         tr("Creates a new empty FreeCAD file"),
-         QLatin1String(":/icons/document-new.svg")}
-    ));
-    auto openFile = gsl::owner<NewFileButton*>(new NewFileButton(
-        {tr("Open File"),
-         tr("Opens an existing CAD file or 3D model"),
-         QLatin1String(":/icons/document-open.svg")}
-    ));
+    if (auto mainWindow = Gui::getMainWindow()) {
+        if (mainWindow->isFullWindowOverlayVisible()) {
+            mainWindow->hideFullWindowOverlay();
+        }
+    }
+    delete _firstStartWidget;
+}
+
+void StartView::configureNewFileButtons(QLayout* layout, bool compact) const
+{
     auto partDesign = gsl::owner<NewFileButton*>(new NewFileButton(
         {tr("Parametric Body"),
          tr("Creates a body with the Part Design workbench"),
-         QLatin1String(":/icons/PartDesignWorkbench.svg")}
+         QLatin1String(":/icons/PartDesignWorkbench.svg")},
+        compact
     ));
     auto assembly = gsl::owner<NewFileButton*>(new NewFileButton(
         {tr("Assembly"),
          tr("Creates an assembly project"),
-         QLatin1String(":/icons/AssemblyWorkbench.svg")}
-    ));
-    auto draft = gsl::owner<NewFileButton*>(new NewFileButton(
-        {tr("2D Draft"), tr("Creates a 2D Draft document"), QLatin1String(":/icons/DraftWorkbench.svg")}
+         QLatin1String(":/icons/AssemblyWorkbench.svg")},
+        compact
     ));
     auto arch = gsl::owner<NewFileButton*>(new NewFileButton(
         {tr("BIM/Architecture"),
          tr("Creates an architectural project"),
-         QLatin1String(":/icons/BIMWorkbench.svg")}
+         QLatin1String(":/icons/BIMWorkbench.svg")},
+        compact
+    ));
+    auto draft = gsl::owner<NewFileButton*>(new NewFileButton(
+        {tr("2D Draft"), tr("Creates a 2D Draft document"), QLatin1String(":/icons/DraftWorkbench.svg")},
+        compact
+    ));
+    auto newEmptyFile = gsl::owner<NewFileButton*>(new NewFileButton(
+        {tr("Empty File"),
+         tr("Creates a new empty FreeCAD file"),
+         QLatin1String(":/icons/document-new.svg")},
+        compact
     ));
 
-    // TODO: Ensure all of the required WBs are actually available
     layout->addWidget(partDesign);
     layout->addWidget(assembly);
-    layout->addWidget(draft);
     layout->addWidget(arch);
+    layout->addWidget(draft);
     layout->addWidget(newEmptyFile);
-    layout->addWidget(openFile);
 
     connect(newEmptyFile, &QPushButton::clicked, this, &StartView::newEmptyFile);
-    connect(openFile, &QPushButton::clicked, this, &StartView::openExistingFile);
     connect(partDesign, &QPushButton::clicked, this, &StartView::newPartDesignFile);
     connect(assembly, &QPushButton::clicked, this, &StartView::newAssemblyFile);
     connect(draft, &QPushButton::clicked, this, &StartView::newDraftFile);
@@ -257,32 +403,29 @@ void StartView::configureFileCardWidget(QListView* fileCardWidget)
 {
     auto delegate = gsl::owner<FileCardDelegate*>(new FileCardDelegate(fileCardWidget));
     fileCardWidget->setItemDelegate(delegate);
-
     fileCardWidget->setMinimumWidth(fileCardWidget->parentWidget()->width());
-    //    fileCardWidget->setGridSize(
-    //        fileCardWidget->itemDelegate()->sizeHint(QStyleOptionViewItem(),
-    //                                                 fileCardWidget->model()->index(0, 0)));
 }
 
 
 void StartView::configureRecentFilesListWidget(QListView* recentFilesListWidget, QLabel* recentFilesLabel)
 {
     _recentFilesModel.loadRecentFiles();
-    recentFilesListWidget->setModel(&_recentFilesModel);
-    configureFileCardWidget(recentFilesListWidget);
+    recentFilesListWidget->setModel(&_openFileProxyModel);
 
-    auto recentFilesGroup = App::GetApplication().GetParameterGroupByPath(
-        "User parameter:BaseApp/Preferences/RecentFiles"
-    );
-    auto numRecentFiles {recentFilesGroup->GetInt("RecentFiles", 0)};
-    if (numRecentFiles == 0) {
-        recentFilesListWidget->hide();
-        recentFilesLabel->hide();
+    // Configure delegate with timestamp and pinned features
+    auto delegate = dynamic_cast<FileCardDelegate*>(recentFilesListWidget->itemDelegate());
+    if (!delegate) {
+        delegate = gsl::owner<FileCardDelegate*>(new FileCardDelegate(recentFilesListWidget));
+        recentFilesListWidget->setItemDelegate(delegate);
     }
-    else {
-        recentFilesListWidget->show();
-        recentFilesLabel->show();
-    }
+    delegate->setShowTimestamp(true);
+    delegate->setShowPinnedIndicator(true);
+
+    recentFilesListWidget->setMinimumWidth(recentFilesListWidget->parentWidget()->width());
+
+    // Always show — the proxy model adds the "Open file..." card even when empty
+    recentFilesListWidget->show();
+    recentFilesLabel->show();
 }
 
 
@@ -290,7 +433,6 @@ void StartView::configureExamplesListWidget(QListView* examplesListWidget)
 {
     _examplesModel.loadExamples();
     examplesListWidget->setModel(&_examplesModel);
-    configureFileCardWidget(examplesListWidget);
 }
 
 
@@ -322,8 +464,6 @@ void StartView::openExistingFile()
     Gui::Application::Instance->commandManager().runCommandByName("Std_Open");
     Gui::Application::checkForRecomputes();
     if (Gui::Application::Instance->activeDocument() != originalDocument) {
-        // Only run this if the user chose a new document to open (that is, they didn't cancel the
-        // open file dialog)
         postStart(PostStartBehavior::switchWorkbench);
     }
 }
@@ -355,7 +495,6 @@ void StartView::newArchFile()
         Gui::Application::Instance->activateWorkbench("ArchWorkbench");
     }
 
-    // Set the camera zoom level to 10 m, which is more appropriate for architectural projects
     Gui::Command::doCommand(
         Gui::Command::Gui,
         "Gui.activeDocument().activeView().viewDefaultOrientation(None, 10000.0)"
@@ -404,6 +543,13 @@ void StartView::fileCardSelected(const QModelIndex& index)
 {
     try {
         auto filename = index.data(static_cast<int>(Start::DisplayedFilesModelRoles::path)).toString();
+
+        // Handle the "Open file..." sentinel card
+        if (filename == OpenFileProxyModel::OpenFileSentinel) {
+            openExistingFile();
+            return;
+        }
+
         Gui::ModuleIO::verifyAndOpenFile(filename);
     }
     catch (Base::PyException& e) {
@@ -417,22 +563,37 @@ void StartView::fileCardSelected(const QModelIndex& index)
     }
 }
 
+void StartView::fileCardContextMenu(const QPoint& pos)
+{
+    auto index = _recentFilesListWidget->indexAt(pos);
+    if (!index.isValid()) {
+        return;
+    }
+
+    auto path = index.data(static_cast<int>(Start::DisplayedFilesModelRoles::path)).toString();
+    if (path == OpenFileProxyModel::OpenFileSentinel) {
+        return;
+    }
+
+    QMenu menu(this);
+    bool pinned = _recentFilesModel.isPinned(path);
+    auto action = menu.addAction(pinned ? tr("Unpin") : tr("Pin"));
+    if (menu.exec(_recentFilesListWidget->viewport()->mapToGlobal(pos)) == action) {
+        _recentFilesModel.togglePinned(path);
+    }
+}
+
 void StartView::showOnStartupChanged(bool checked)
 {
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    hGrp->SetBool(
-        "ShowOnStartup",
-        !checked
-    );  // The sense of this option has been reversed: the checkbox actually says
-        // "*Don't* show on startup" now, but the option is preserved in its
-        // original sense, so is stored inverted.
+    hGrp->SetBool("ShowOnStartup", !checked);
 }
 
 void StartView::openFirstStartClicked()
 {
-    _contents->setCurrentIndex(0);
+    showWizardOverlay();
 }
 
 void StartView::firstStartWidgetDismissed()
@@ -440,8 +601,26 @@ void StartView::firstStartWidgetDismissed()
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    hGrp->SetBool("FirstStart2024", false);
-    _contents->setCurrentIndex(1);
+    hGrp->SetBool("FirstStart2025", false);
+    if (auto mainWindow = Gui::getMainWindow()) {
+        disconnect(mainWindow, &Gui::MainWindow::fullWindowOverlayHidden,
+                   this, &StartView::firstStartWidgetDismissed);
+        mainWindow->hideFullWindowOverlay();
+    }
+}
+
+void StartView::showWizardOverlay()
+{
+    if (auto mainWindow = Gui::getMainWindow()) {
+        if (_firstStartWidget) {
+            _firstStartWidget->resetToFirstStep();
+            mainWindow->showFullWindowOverlay(_firstStartWidget);
+            // Dismiss wizard if overlay is hidden externally (e.g. Escape key)
+            connect(mainWindow, &Gui::MainWindow::fullWindowOverlayHidden,
+                    this, &StartView::firstStartWidgetDismissed,
+                    Qt::UniqueConnection);
+        }
+    }
 }
 
 void StartView::changeEvent(QEvent* event)
@@ -465,6 +644,20 @@ void StartView::changeEvent(QEvent* event)
         this->retranslateUi();
     }
 
+    if (event->type() == QEvent::PaletteChange
+        || event->type() == QEvent::StyleChange) {
+        updateWordmark();
+        if (_recentFilesListWidget && _recentFilesListWidget->viewport()) {
+            _recentFilesListWidget->viewport()->update();
+        }
+        if (_rightPanel) {
+            _rightPanel->updateGeometry();
+        }
+        if (_rightScrollArea) {
+            _rightScrollArea->updateGeometry();
+        }
+    }
+
     Gui::MDIView::changeEvent(event);
 }
 
@@ -481,20 +674,133 @@ void StartView::showEvent(QShowEvent* event)
             );
         }
     }
+
+    // Show wizard overlay on first run (deferred so MainWindow geometry is ready)
+    if (!_firstStartShown) {
+        auto hGrp = App::GetApplication().GetParameterGroupByPath(
+            "User parameter:BaseApp/Preferences/Mod/Start"
+        );
+        if (hGrp->GetBool("FirstStart2025", true)) {
+            _firstStartShown = true;
+            QTimer::singleShot(0, this, &StartView::showWizardOverlay);
+        }
+    }
+
+    updateWordmark();  // re-check wordmark after stylesheet is applied
     Gui::MDIView::showEvent(event);
+}
+
+void StartView::resizeEvent(QResizeEvent* event)
+{
+    Gui::MDIView::resizeEvent(event);
+    updateLayout();
+    updateContentCentering();
+}
+
+
+void StartView::updateContentCentering()
+{
+    if (!_bodyLayout || !_contents) {
+        return;
+    }
+
+    int availW = _contents->width();
+    int availH = _contents->height();
+
+    int marginH = (_maxContentWidth > 0) ? qMax(0, (availW - _maxContentWidth) / 2) : 0;
+    int marginV = (_maxContentHeight > 0) ? qMax(0, (availH - _maxContentHeight) / 2) : 0;
+
+    _bodyLayout->setContentsMargins(marginH, marginV, marginH, marginV);
+}
+
+void StartView::updateWordmark()
+{
+    if (!_wordmarkLabel) {
+        return;
+    }
+
+    bool isDark = false;
+
+    auto hGrp = App::GetApplication().GetParameterGroupByPath(
+        "User parameter:BaseApp/Preferences/MainWindow"
+    );
+    auto theme = QString::fromStdString(hGrp->GetASCII("Theme", "Classic"));
+
+    if (theme.contains(QLatin1String("Dark"), Qt::CaseInsensitive)) {
+        isDark = true;
+    }
+    else if (theme.contains(QLatin1String("Light"), Qt::CaseInsensitive)) {
+        isDark = false;
+    }
+    else {
+        QColor bg = _wordmarkLabel->palette().color(QPalette::Window);
+        double luminance = 0.299 * bg.redF() + 0.587 * bg.greenF() + 0.114 * bg.blueF();
+        isDark = luminance < 0.5;
+    }
+
+    QString wordmarkPath = isDark
+        ? QStringLiteral(":/branding/FreeCAD-wordmark-light.svg")
+        : QStringLiteral(":/branding/FreeCAD-wordmark.svg");
+    QPixmap wordmark(wordmarkPath);
+    if (!wordmark.isNull()) {
+        _wordmarkLabel->setPixmap(wordmark.scaledToHeight(56, Qt::SmoothTransformation));
+    }
+}
+
+void StartView::updateLayout()
+{
+    if (!isInitialized || !_rightPanel || !_leftContentLayout) {
+        return;
+    }
+
+    int width = this->width();
+    bool shouldBeTwoColumn = width >= responsiveBreakpoint;
+
+    if (shouldBeTwoColumn == _isTwoColumn) {
+        return;
+    }
+
+    if (shouldBeTwoColumn) {
+        // Restore two-column: move containers back to right panel
+        _leftContentLayout->removeWidget(_examplesContainer);
+        _leftContentLayout->removeWidget(_learnContainer);
+        auto rightLayout = _rightPanel->layout();
+        if (rightLayout) {
+            rightLayout->addWidget(_examplesContainer);
+            rightLayout->addWidget(_learnContainer);
+        }
+        if (_rightScrollArea) {
+            _rightScrollArea->show();
+        }
+        if (_sidebarDivider) {
+            _sidebarDivider->show();
+        }
+    }
+    else {
+        // Collapse to single column: move sidebar widgets into left content
+        if (_rightScrollArea) {
+            _rightScrollArea->hide();
+        }
+        if (_sidebarDivider) {
+            _sidebarDivider->hide();
+        }
+        // Insert before the stretch at the end
+        int insertIdx = _leftContentLayout->count() - 1;  // before stretch
+        _leftContentLayout->insertWidget(insertIdx, _examplesContainer);
+        _leftContentLayout->insertWidget(insertIdx + 1, _learnContainer);
+    }
+
+    _isTwoColumn = shouldBeTwoColumn;
 }
 
 void StartView::onMdiSubWindowActivated(QMdiSubWindow* subWindow)
 {
-    // check if start view is activated subwindow if yes, then enable updates
-    // so we can once again receive paint events
     bool isOurWindow = subWindow && subWindow->isAncestorOf(this);
     setListViewUpdatesEnabled(isOurWindow);
 }
 
 void StartView::setListViewUpdatesEnabled(bool enabled)
 {
-    // disable updates on all QListView widgets when inactive to prevent unnecessary paint events
     QList<QListView*> listViews = findChildren<QListView*>();
     for (QListView* listView : listViews) {
         listView->setUpdatesEnabled(enabled);
@@ -514,14 +820,23 @@ void StartView::retranslateUi()
     QString title = QCoreApplication::translate("Workbench", "Start");
     setWindowTitle(title);
 
-    const QLatin1String h1Start("<h1>");
-    const QLatin1String h1End("</h1>");
-
-    _newFileLabel->setText(h1Start + tr("New File") + h1End);
-    if (_examplesLabel) {
-        _examplesLabel->setText(h1Start + tr("Examples") + h1End);
+    // Header
+    auto versionStr = QString::fromUtf8(App::Application::Config()["ExeVersion"].c_str());
+    auto appName = QString::fromUtf8(App::Application::Config()["ExeName"].c_str());
+    _headerLabel->setText(QStringLiteral("v%1").arg(versionStr));
+    if (_headerTaglineLabel) {
+        _headerTaglineLabel->setText(tr("Open Source Parametric 3D Modeler"));
     }
-    _recentFilesLabel->setText(h1Start + tr("Recent Files") + h1End);
+
+    // Section labels
+    _recentFilesLabel->setText(tr("Recent Files"));
+    _createNewLabel->setText(tr("Create New"));
+    if (_examplesSectionLabel) {
+        _examplesSectionLabel->setText(tr("Examples"));
+    }
+    if (_learnSectionLabel) {
+        _learnSectionLabel->setText(tr("Learn"));
+    }
 
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
@@ -532,10 +847,16 @@ void StartView::retranslateUi()
             _customFolderLabel->setToolTip(QString::fromUtf8(customFolder.c_str()));
             customFolder = customFolder.substr(customFolder.find_last_of("/\\") + 1);
         }
-        _customFolderLabel->setText(h1Start + QString::fromUtf8(customFolder.c_str()) + h1End);
+        _customFolderLabel->setText(QString::fromUtf8(customFolder.c_str()));
     }
 
-    QString application = QString::fromUtf8(App::Application::Config()["ExeName"].c_str());
-    _openFirstStart->setText(tr("Open First Start Setup"));
-    _showOnStartupCheckBox->setText(tr("Do not show this Start page again (start with blank screen)"));
+    if (_gettingStartedLabel) {
+        _gettingStartedLabel->setText(tr("Getting Started"));
+    }
+    if (_browseExamplesButton) {
+        _browseExamplesButton->setText(tr("Browse all examples..."));
+    }
+
+    _openFirstStart->setText(tr("Setup Wizard"));
+    _showOnStartupCheckBox->setText(tr("Do not show this Start page again"));
 }

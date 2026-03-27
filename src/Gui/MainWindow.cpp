@@ -44,6 +44,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QScreen>
+#include <QScrollArea>
 #include <QSettings>
 #include <QSignalMapper>
 #include <QStatusBar>
@@ -51,6 +52,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QUrlQuery>
+#include <QVBoxLayout>
 #include <QWhatsThis>
 #include <QWindow>
 #include <QPushButton>
@@ -327,6 +329,11 @@ struct MainWindowP
     bool _restoring = false;
     QTime _showNormal;
     void restoreWindowState(const QByteArray&);
+
+    // Full-window overlay
+    QPointer<QWidget> fullWindowOverlay;
+    QPointer<QWidget> fullWindowContent;
+    bool raisingOverlay = false;
 };
 
 }  // namespace Gui
@@ -664,7 +671,7 @@ bool MainWindow::checkFirstRun()
     ParameterGrp::handle hGrpFS2024 = App::GetApplication().GetParameterGroupByPath(
         "User parameter:BaseApp/Preferences/Mod/Start"
     );
-    auto firstStart = hGrpFS2024->GetBool("FirstStart2024", true);  // NOLINT
+    auto firstStart = hGrpFS2024->GetBool("FirstStart2025", true);  // NOLINT
     if (firstStart && RecentFilesCount < 1) {
         return true;
     }
@@ -1184,12 +1191,37 @@ bool MainWindow::event(QEvent* e)
             return true;
         }
     }
+    else if (e->type() == QEvent::Resize || e->type() == QEvent::LayoutRequest) {
+        if (d->fullWindowOverlay && d->fullWindowOverlay->isVisible()) {
+            d->fullWindowOverlay->setGeometry(0, 0, width(), height());
+        }
+    }
     return QMainWindow::event(e);
 }
 
 bool MainWindow::eventFilter(QObject* o, QEvent* e)
 {
     if (o != this) {
+        // Full-window overlay: re-raise after OverlayManager's queued raiseAll()
+        if (d->fullWindowOverlay && o == d->fullWindowOverlay) {
+            if (e->type() == QEvent::ZOrderChange && !d->raisingOverlay) {
+                QMetaObject::invokeMethod(this, [this]() {
+                    if (d->fullWindowOverlay && d->fullWindowOverlay->isVisible()
+                        && !d->raisingOverlay) {
+                        d->raisingOverlay = true;
+                        d->fullWindowOverlay->raise();
+                        d->raisingOverlay = false;
+                    }
+                }, Qt::QueuedConnection);
+                return false;
+            }
+            if (e->type() == QEvent::KeyPress
+                && static_cast<QKeyEvent*>(e)->key() == Qt::Key_Escape) {
+                hideFullWindowOverlay();
+                return true;
+            }
+        }
+
         if (e->type() == QEvent::WindowStateChange) {
             // notify all mdi views when the active view receives a show normal, show minimized
             // or show maximized event
@@ -2692,6 +2724,70 @@ void MainWindow::customEvent(QEvent* e)
 QMdiArea* MainWindow::getMdiArea() const
 {
     return d->mdiArea;
+}
+
+void MainWindow::showFullWindowOverlay(QWidget* content)
+{
+    if (!content) {
+        return;
+    }
+
+    if (d->fullWindowOverlay) {
+        hideFullWindowOverlay();
+    }
+
+    auto overlay = new QWidget(this);
+    overlay->setObjectName(QStringLiteral("fullWindowOverlay"));
+    overlay->setStyleSheet(QStringLiteral("QWidget#fullWindowOverlay { background: rgba(0,0,0,77); }"));
+
+    auto scrollArea = new QScrollArea(overlay);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setStyleSheet(QStringLiteral("background: transparent; border: none;"));
+
+    auto scrollWidget = new QWidget();
+    auto layout = new QVBoxLayout(scrollWidget);
+    layout->setAlignment(Qt::AlignCenter);
+    layout->setContentsMargins(32, 32, 32, 32);
+    layout->addWidget(content);
+    scrollArea->setWidget(scrollWidget);
+
+    auto overlayLayout = new QVBoxLayout(overlay);
+    overlayLayout->setContentsMargins(0, 0, 0, 0);
+    overlayLayout->addWidget(scrollArea);
+
+    d->fullWindowOverlay = overlay;
+    d->fullWindowContent = content;
+
+    overlay->setGeometry(0, 0, width(), height());
+    overlay->setFocusPolicy(Qt::StrongFocus);
+    overlay->installEventFilter(this);
+    overlay->show();
+    overlay->raise();
+    overlay->setFocus();
+}
+
+void MainWindow::hideFullWindowOverlay()
+{
+    if (!d->fullWindowOverlay) {
+        return;
+    }
+
+    if (d->fullWindowContent) {
+        d->fullWindowContent->setParent(nullptr);
+        d->fullWindowContent = nullptr;
+    }
+
+    d->fullWindowOverlay->hide();
+    d->fullWindowOverlay->deleteLater();
+    d->fullWindowOverlay = nullptr;
+
+    Q_EMIT fullWindowOverlayHidden();
+}
+
+bool MainWindow::isFullWindowOverlayVisible() const
+{
+    return d->fullWindowOverlay && d->fullWindowOverlay->isVisible();
 }
 
 void MainWindow::setWindowTitle(const QString& string)

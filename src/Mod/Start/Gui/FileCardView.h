@@ -39,8 +39,6 @@ public:
 
     QSize sizeHint() const override;
 
-private:
-    int m_cardSpacing;
 };
 
 }  // namespace StartGui

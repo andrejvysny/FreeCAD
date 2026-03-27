@@ -31,16 +31,20 @@
 #include "../App/RecentFilesModel.h"
 #include "../App/ExamplesModel.h"
 #include "../App/CustomFolderModel.h"
+#include "OpenFileProxyModel.h"
 
 class QCheckBox;
 class QEvent;
+class QFrame;
 class QGridLayout;
+class QHBoxLayout;
 class QLabel;
 class QListView;
 class QMdiSubWindow;
 class QScrollArea;
 class QStackedWidget;
 class QPushButton;
+class QVBoxLayout;
 
 namespace Gui
 {
@@ -50,6 +54,10 @@ class Document;
 namespace StartGui
 {
 
+class FirstStartWidget;
+class GettingStartedCard;
+class LearnLinksWidget;
+
 class StartGuiExport StartView: public Gui::MDIView
 {
     Q_OBJECT
@@ -58,6 +66,7 @@ class StartGuiExport StartView: public Gui::MDIView
 
 public:
     StartView(QWidget* parent);
+    ~StartView() override;
 
     const char* getName() const override
     {
@@ -84,8 +93,9 @@ public:
 protected:
     void changeEvent(QEvent* e) override;
     void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
-    void configureNewFileButtons(QLayout* layout) const;
+    void configureNewFileButtons(QLayout* layout, bool compact = false) const;
     static void configureFileCardWidget(QListView* fileCardWidget);
     void configureRecentFilesListWidget(QListView* recentFilesListWidget, QLabel* recentFilesLabel);
     void configureExamplesListWidget(QListView* examplesListWidget);
@@ -97,6 +107,7 @@ protected:
     void showOnStartupChanged(bool checked);
     void openFirstStartClicked();
     void firstStartWidgetDismissed();
+    void fileCardContextMenu(const QPoint& pos);
 
     QString fileCardStyle() const;
 
@@ -106,20 +117,67 @@ private Q_SLOTS:
 private:
     void retranslateUi();
     void setListViewUpdatesEnabled(bool enabled);
+    void updateLayout();
+    void updateContentCentering();
+    void updateWordmark();
 
     QStackedWidget* _contents = nullptr;
     Start::RecentFilesModel _recentFilesModel;
     Start::ExamplesModel _examplesModel;
     Start::CustomFolderModel _customFolderModel;
-    QLabel* _newFileLabel;
-    QLabel* _examplesLabel;
-    QLabel* _recentFilesLabel;
-    QLabel* _customFolderLabel;
-    QPushButton* _openFirstStart;
-    QCheckBox* _showOnStartupCheckBox;
+    OpenFileProxyModel _openFileProxyModel;
+
+    // Header
+    QLabel* _headerLabel = nullptr;
+    QLabel* _wordmarkLabel = nullptr;
+    QLabel* _headerTaglineLabel = nullptr;
+
+    // Section labels
+    QLabel* _recentFilesLabel = nullptr;
+    QLabel* _createNewLabel = nullptr;
+    QLabel* _customFolderLabel = nullptr;
+    QLabel* _examplesSectionLabel = nullptr;
+    QLabel* _learnSectionLabel = nullptr;
+
+    // Layout references for responsive reparenting
+    QVBoxLayout* _leftContentLayout = nullptr;
+    QWidget* _leftContentWidget = nullptr;
+    QScrollArea* _leftScrollArea = nullptr;
+    QWidget* _rightPanel = nullptr;
+    QScrollArea* _rightScrollArea = nullptr;
+    QHBoxLayout* _bodyLayout = nullptr;
+    QFrame* _sidebarDivider = nullptr;
+    bool _isTwoColumn = true;
+    static constexpr int responsiveBreakpoint = 800;
+    static constexpr int defaultMaxContentWidth = 1600;
+    static constexpr int defaultMaxContentHeight = 800;
+    int _maxContentWidth = defaultMaxContentWidth;
+    int _maxContentHeight = defaultMaxContentHeight;
+
+    // Recent files list (stored for context menu)
+    QListView* _recentFilesListWidget = nullptr;
+
+    // Sidebar widgets (stored for reparenting)
+    QFrame* _examplesContainer = nullptr;
+    QFrame* _learnContainer = nullptr;
+
+    // Getting Started card
+    QLabel* _gettingStartedLabel = nullptr;
+    GettingStartedCard* _gettingStartedCard = nullptr;
+
+    // Browse examples button
+    QPushButton* _browseExamplesButton = nullptr;
+
+    // First Start wizard
+    FirstStartWidget* _firstStartWidget = nullptr;
+    bool _firstStartShown = false;
+    void showWizardOverlay();
+
+    // Footer
+    QPushButton* _openFirstStart = nullptr;
+    QCheckBox* _showOnStartupCheckBox = nullptr;
 
     bool isInitialized = false;
-
-};  // namespace StartGui
+};
 
 }  // namespace StartGui

@@ -160,6 +160,8 @@ QVariant DisplayedFilesModel::data(const QModelIndex& index, int role) const
                 return QString::fromStdString(mapEntry.at(roleAsType));
             }
             break;
+        case DisplayedFilesModelRoles::pinned:
+            return false;
         case DisplayedFilesModelRoles::image: {
             if (const auto path = QString::fromStdString(mapEntry.at(DisplayedFilesModelRoles::path));
                 _imageCache.contains(path)) {
@@ -256,6 +258,7 @@ QHash<int, QByteArray> DisplayedFilesModel::roleNames() const
         std::make_pair(static_cast<int>(DisplayedFilesModelRoles::modifiedTime), "modifiedTime"),
         std::make_pair(static_cast<int>(DisplayedFilesModelRoles::path), "path"),
         std::make_pair(static_cast<int>(DisplayedFilesModelRoles::size), "size"),
+        std::make_pair(static_cast<int>(DisplayedFilesModelRoles::pinned), "pinned"),
     };
     return nameMap;
 }
