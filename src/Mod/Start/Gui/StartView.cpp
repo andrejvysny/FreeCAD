@@ -75,6 +75,7 @@ static constexpr int pageMargin = 24;
 static constexpr int topMargin = 32;
 static constexpr int bottomMargin = 16;
 static constexpr int sectionSpacing = 16;
+static constexpr int firstStartVerticalMargin = 24;
 
 QLabel* makeSectionLabel(const QString& text, QWidget* parent = nullptr)
 {
@@ -106,15 +107,32 @@ StartView::StartView(QWidget* parent)
     // First start page (unchanged)
     // =========================================================================
     auto firstStartScrollArea = gsl::owner<QScrollArea*>(new QScrollArea());
+    firstStartScrollArea->setFrameShape(QFrame::NoFrame);
     auto firstStartScrollWidget = gsl::owner<QWidget*>(new QWidget(firstStartScrollArea));
     firstStartScrollArea->setWidget(firstStartScrollWidget);
     firstStartScrollArea->setWidgetResizable(true);
 
-    auto firstStartRegion = gsl::owner<QHBoxLayout*>(new QHBoxLayout(firstStartScrollWidget));
-    firstStartRegion->setAlignment(Qt::AlignCenter);
     auto firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(this));
     connect(firstStartWidget, &FirstStartWidget::dismissed, this, &StartView::firstStartWidgetDismissed);
-    firstStartRegion->addWidget(firstStartWidget);
+    auto firstStartRegion = gsl::owner<QVBoxLayout*>(new QVBoxLayout(firstStartScrollWidget));
+    firstStartRegion->setContentsMargins(
+        pageMargin,
+        firstStartVerticalMargin,
+        pageMargin,
+        firstStartVerticalMargin
+    );
+    firstStartRegion->setSpacing(0);
+
+    auto firstStartRow = gsl::owner<QHBoxLayout*>(new QHBoxLayout());
+    firstStartRow->setContentsMargins(0, 0, 0, 0);
+    firstStartRow->setSpacing(0);
+    firstStartRow->addStretch();
+    firstStartRow->addWidget(firstStartWidget);
+    firstStartRow->addStretch();
+
+    firstStartRegion->addStretch(1);
+    firstStartRegion->addLayout(firstStartRow);
+    firstStartRegion->addStretch(1);
     _contents->addWidget(firstStartScrollArea);
 
     // =========================================================================
@@ -153,13 +171,6 @@ StartView::StartView(QWidget* parent)
     _headerLabel = gsl::owner<QLabel*>(new QLabel());
     _headerLabel->setObjectName(QStringLiteral("startVersionLabel"));
 
-    // RECENT FILES section
-    _recentFilesLabel = makeSectionLabel(QString());
-    _leftContentLayout->addWidget(_recentFilesLabel);
-    auto recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
-    connect(recentFilesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
-    _leftContentLayout->addWidget(recentFilesListWidget);
-
     // CREATE NEW section
     _createNewLabel = makeSectionLabel(QString());
     _leftContentLayout->addWidget(_createNewLabel);
@@ -171,12 +182,21 @@ StartView::StartView(QWidget* parent)
     _leftContentLayout->addWidget(createNewRow);
     configureNewFileButtons(flowLayout);
 
+    // RECENT FILES section
+    _recentFilesLabel = makeSectionLabel(QString());
+    _leftContentLayout->addWidget(_recentFilesLabel);
+    auto recentFilesListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
+    recentFilesListWidget->setProperty("startFileCardList", true);
+    connect(recentFilesListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
+    _leftContentLayout->addWidget(recentFilesListWidget);
+
     // CUSTOM FOLDER section (optional)
     FileCardView* customFolderListWidget {};
     if (showCustomFolder) {
         _customFolderLabel = makeSectionLabel(QString());
         _leftContentLayout->addWidget(_customFolderLabel);
         customFolderListWidget = gsl::owner<FileCardView*>(new FileCardView(_contents));
+        customFolderListWidget->setProperty("startFileCardList", true);
         connect(customFolderListWidget, &QListView::clicked, this, &StartView::fileCardSelected);
         _leftContentLayout->addWidget(customFolderListWidget);
     }
@@ -353,7 +373,6 @@ void StartView::configureFileCardWidget(QListView* fileCardWidget)
 {
     auto delegate = gsl::owner<FileCardDelegate*>(new FileCardDelegate(fileCardWidget));
     fileCardWidget->setItemDelegate(delegate);
-    fileCardWidget->setMinimumWidth(fileCardWidget->parentWidget()->width());
 }
 
 

@@ -52,11 +52,7 @@ QPushButton* makeLearnLink(const QString& text, const QString& iconPath, const Q
 
 QString LearnLinksWidget::releaseNotesUrl()
 {
-    QString version = QString::fromStdString(App::Application::Config()["ExeVersion"]);
-    QStringList parts = version.split(QLatin1Char('.'));
-    QString majorMinor =
-        parts.size() >= 2 ? parts.at(0) + QLatin1Char('_') + parts.at(1) : version;
-    return QStringLiteral("https://wiki.freecad.org/Release_notes_") + majorMinor;
+    return QStringLiteral("https://wiki.freecad.org/Release_notes_%1").arg(whatsNewLabel());
 }
 
 QString LearnLinksWidget::whatsNewLabel()
@@ -96,8 +92,8 @@ LearnLinksWidget::LearnLinksWidget(QWidget* parent)
         QStringLiteral("https://forum.freecad.org")
     ));
     layout->addWidget(makeLearnLink(
-        tr("Community"),
+        tr("Github"),
         QStringLiteral(":/icons/internet-web-browser.svg"),
-        QStringLiteral("https://freecad.org/community")
+        QStringLiteral("https://github.com/FreeCAD/FreeCAD")
     ));
 }

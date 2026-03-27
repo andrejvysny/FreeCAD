@@ -37,6 +37,7 @@ class GeneralSettingsWidget: public QWidget
     Q_OBJECT
 public:
     explicit GeneralSettingsWidget(QWidget* parent = nullptr);
+    void refreshFromPreferences();
 
     bool eventFilter(QObject* object, QEvent* event) override;
 
@@ -44,26 +45,32 @@ private:
     void retranslateUi();
 
     void setupUi();
-    void createHorizontalUi();
-
-    QString createLabelText(const QString& translatedText) const;
     gsl::owner<QComboBox*> createLanguageComboBox();
     gsl::owner<QComboBox*> createUnitSystemComboBox();
     gsl::owner<QComboBox*> createNavigationStyleComboBox();
+    gsl::owner<QComboBox*> createOrbitStyleComboBox();
+    void populateUnitSystemComboBox();
+    void populateNavigationStyleComboBox();
+    void populateOrbitStyleComboBox();
 
     void onLanguageChanged(int index);
     void onUnitSystemChanged(int index);
     void onNavigationStyleChanged(int index);
-
-    Qt::Orientation _orientation;
+    void onOrbitStyleChanged(int index);
 
     // Non-owning pointers to things that need to be re-translated when the language changes
     QLabel* _languageLabel;
     QLabel* _unitSystemLabel;
     QLabel* _navigationStyleLabel;
+    QLabel* _orbitStyleLabel;
+    QLabel* _languageHelperLabel;
+    QLabel* _unitSystemHelperLabel;
+    QLabel* _navigationStyleHelperLabel;
+    QLabel* _orbitStyleHelperLabel;
     QComboBox* _languageComboBox;
     QComboBox* _unitSystemComboBox;
     QComboBox* _navigationStyleComboBox;
+    QComboBox* _orbitStyleComboBox;
 };
 
 }  // namespace StartGui

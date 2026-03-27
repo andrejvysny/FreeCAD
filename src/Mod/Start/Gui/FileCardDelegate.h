@@ -37,6 +37,8 @@ class FileCardDelegate: public QStyledItemDelegate
 public:
     explicit FileCardDelegate(QObject* parent = nullptr);
 
+    QSize cardSize() const;
+
     void paint(
         QPainter* painter,
         const QStyleOptionViewItem& option,
@@ -49,12 +51,15 @@ protected:
     QPixmap generateThumbnail(const QString& path) const;
 
 private:
+    QRect cardRect(const QRect& itemRect) const;
     QString getCacheKey(const QString& path, int thumbnailSize) const;
     QPixmap loadAndCacheThumbnail(const QString& path, int thumbnailSize) const;
+    int thumbnailSize() const;
 
     Base::Reference<ParameterGrp> _parameterGroup;
     const int margin = 11;
     const int textspacing = 2;
+    int _cardSpacing = 0;
     QPushButton styleButton;
 
     static QCache<QString, QPixmap> _thumbnailCache;  // cache key structure: "path:modtime:size"

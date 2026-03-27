@@ -40,6 +40,8 @@ public:
     QSize sizeHint() const override;
 
 private:
+    QSize itemCellSize() const;
+
     int m_cardSpacing;
 };
 

@@ -2,6 +2,10 @@
 
 add_subdirectory(App)
 
+if(BUILD_GUI)
+    add_subdirectory(Gui)
+endif()
+
 target_include_directories(Start_tests_run PUBLIC
     ${Python3_INCLUDE_DIRS}
 )

@@ -23,10 +23,10 @@
 
 #pragma once
 
+#include <QLayout>
 #include <QWidget>
 #include <array>
 
-class QBoxLayout;
 class QLabel;
 class QToolButton;
 
@@ -46,7 +46,11 @@ class ThemeSelectorWidget: public QWidget
     Q_OBJECT
 public:
     explicit ThemeSelectorWidget(QWidget* parent = nullptr);
+    void refreshFromPreferences();
     bool eventFilter(QObject* object, QEvent* event) override;
+
+Q_SIGNALS:
+    void themeApplied();
 
 protected:
     void themeChanged(Theme newTheme);
@@ -54,12 +58,15 @@ protected:
 private:
     void retranslateUi();
     void setupUi();
-    void setupButtons(QBoxLayout* layout);
+    void setupButtons(QLayout* layout);
     void onLinkActivated(const QString& link);
     void preselectThemeFromSystemSettings();
+    Theme currentThemeFromPreferences() const;
+    bool hasAddonManagerCommand() const;
 
     QLabel* _titleLabel;
-    QLabel* _descriptionLabel;
+    QLabel* _helperLabel;
+    QLabel* _addonManagerLabel;
     std::array<QToolButton*, 3> _buttons;
 };
 

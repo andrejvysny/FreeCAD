@@ -43,15 +43,23 @@ public:
     bool eventFilter(QObject* object, QEvent* event) override;
     Q_SIGNAL void dismissed();
 
+protected:
+    virtual bool openAdvancedSettings();
+
 private:
     void retranslateUi();
     void setupUi();
+    void updateWordmark();
+    void refreshFromPreferences();
+    void onAdvancedSettingsClicked();
 
     ThemeSelectorWidget* _themeSelectorWidget;
     GeneralSettingsWidget* _generalSettingsWidget;
 
-    QLabel* _welcomeLabel;
+    QLabel* _wordmarkLabel;
     QLabel* _descriptionLabel;
+    QWidget* _buttonRowWidget;
+    QPushButton* _advancedSettingsButton;
     QPushButton* _doneButton;
 };
 
