@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2026 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -23,54 +23,56 @@
 
 #pragma once
 
-#include <QWidget>
-#include <gsl/pointers>
+#include <Mod/Start/StartGlobal.h>
 
-class QLabel;
-class QComboBox;
+#include <QPointer>
+#include <QObject>
+
+class QWidget;
 
 namespace StartGui
 {
 
-class GeneralSettingsWidget: public QWidget
+class StartupWizardOverlay;
+
+class StartGuiExport StartupWizardController: public QObject
 {
     Q_OBJECT
-public:
-    explicit GeneralSettingsWidget(QWidget* parent = nullptr);
-    void refreshFromPreferences();
 
-    bool eventFilter(QObject* object, QEvent* event) override;
+public:
+    explicit StartupWizardController(QObject* parent = nullptr);
+
+    static StartupWizardController& instance();
+
+    void scheduleStartup();
+    virtual void showIfPending();
+    virtual void showManual();
+
+    StartupWizardOverlay* overlay() const;
+
+protected:
+    void attemptStartup();
+    virtual QWidget* getMainWindow() const;
+    virtual bool canRunCommandByName(const char* name) const;
+    virtual bool runCommandByName(const char* name);
+    virtual bool isStartupReady() const;
 
 private:
-    void retranslateUi();
+    void ensureOverlay();
+    bool hasBlockingModalWidget() const;
+    bool shouldLaunchStartPage() const;
+    bool isFirstStartPending() const;
+    void markFirstStartCompleted() const;
 
-    void setupUi();
-    gsl::owner<QComboBox*> createLanguageComboBox();
-    gsl::owner<QComboBox*> createUnitSystemComboBox();
-    gsl::owner<QComboBox*> createNavigationStyleComboBox();
-    gsl::owner<QComboBox*> createOrbitStyleComboBox();
-    void populateUnitSystemComboBox();
-    void populateNavigationStyleComboBox();
-    void populateOrbitStyleComboBox();
+private Q_SLOTS:
+    void onOverlayDismissed();
+    void onAdvancedSettingsRequested();
 
-    void onLanguageChanged(int index);
-    void onUnitSystemChanged(int index);
-    void onNavigationStyleChanged(int index);
-    void onOrbitStyleChanged(int index);
-
-    // Non-owning pointers to things that need to be re-translated when the language changes
-    QLabel* _languageLabel;
-    QLabel* _unitSystemLabel;
-    QLabel* _navigationStyleLabel;
-    QLabel* _orbitStyleLabel;
-    QLabel* _languageHelperLabel;
-    QLabel* _unitSystemHelperLabel;
-    QLabel* _navigationStyleHelperLabel;
-    QLabel* _orbitStyleHelperLabel;
-    QComboBox* _languageComboBox;
-    QComboBox* _unitSystemComboBox;
-    QComboBox* _navigationStyleComboBox;
-    QComboBox* _orbitStyleComboBox;
+private:
+    QPointer<StartupWizardOverlay> _overlay;
+    bool _startupScheduled;
+    bool _startupHandled;
+    bool _startPageLaunchRequested;
 };
 
 }  // namespace StartGui

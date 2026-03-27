@@ -34,13 +34,15 @@
 
 class QCheckBox;
 class QEvent;
+class QFrame;
 class QGridLayout;
+class QHBoxLayout;
 class QLabel;
 class QListView;
 class QMdiSubWindow;
 class QScrollArea;
-class QStackedWidget;
 class QPushButton;
+class QVBoxLayout;
 
 namespace Gui
 {
@@ -96,9 +98,6 @@ protected:
     void fileCardSelected(const QModelIndex& index);
     void showOnStartupChanged(bool checked);
     void openFirstStartClicked();
-    void firstStartWidgetDismissed();
-
-    QString fileCardStyle() const;
 
 private Q_SLOTS:
     void onMdiSubWindowActivated(QMdiSubWindow* subWindow);
@@ -106,20 +105,38 @@ private Q_SLOTS:
 private:
     void retranslateUi();
     void setListViewUpdatesEnabled(bool enabled);
+    void updateWordmark();
 
-    QStackedWidget* _contents = nullptr;
     Start::RecentFilesModel _recentFilesModel;
     Start::ExamplesModel _examplesModel;
     Start::CustomFolderModel _customFolderModel;
-    QLabel* _newFileLabel;
-    QLabel* _examplesLabel;
-    QLabel* _recentFilesLabel;
-    QLabel* _customFolderLabel;
-    QPushButton* _openFirstStart;
-    QCheckBox* _showOnStartupCheckBox;
+
+    // Header
+    QLabel* _wordmarkLabel = nullptr;
+    QLabel* _headerLabel = nullptr;  // version label in footer
+
+    // Section labels
+    QLabel* _recentFilesLabel = nullptr;
+    QLabel* _createNewLabel = nullptr;
+    QLabel* _customFolderLabel = nullptr;
+    QLabel* _examplesSectionLabel = nullptr;
+    QLabel* _learnSectionLabel = nullptr;
+    // Layout refs
+    QVBoxLayout* _leftContentLayout = nullptr;
+    QScrollArea* _leftScrollArea = nullptr;
+    QWidget* _rightPanel = nullptr;
+    QScrollArea* _rightScrollArea = nullptr;
+    QHBoxLayout* _bodyLayout = nullptr;
+    QFrame* _sidebarDivider = nullptr;
+
+    // Browse examples button
+    QPushButton* _browseExamplesButton = nullptr;
+
+    // Footer
+    QPushButton* _openFirstStart = nullptr;
+    QCheckBox* _showOnStartupCheckBox = nullptr;
 
     bool isInitialized = false;
-
-};  // namespace StartGui
+};
 
 }  // namespace StartGui

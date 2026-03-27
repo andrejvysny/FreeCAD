@@ -2646,18 +2646,133 @@ QMdiSubWindow:active {
 /*==================================================================================================
 Start page
 ==================================================================================================*/
-QWidget#thumbnailWidget {
+/* Start page scroll areas — remove MDI border */
+QScrollArea#startLeftScrollArea,
+QScrollArea#startRightScrollArea {
+  border: none;
+  background-color: transparent;
+}
+
+QWidget#startupWizardOverlay {
+  background-color: rgba(0, 0, 0, 116);
+}
+
+QScrollArea#startupWizardOverlayScrollArea {
+  border: none;
+  background-color: transparent;
+}
+
+QFrame#startupWizardPanel {
+  background-color: @GroupboxBackgroundColor;
+  border: 1px solid @GroupboxBorderColor;
+  border-radius: 10px;
+}
+
+/* Section labels */
+QLabel#startSectionLabel {
+  color: @TextForegroundColor;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 4px 0;
+}
+
+/* Sidebar divider */
+QFrame#startSidebarDivider {
+  background-color: @GeneralBorderColor;
+  border: none;
+  min-width: 1px;
+  max-width: 1px;
+}
+
+/* Version label */
+QLabel#startVersionLabel {
+  color: @TextDisabledColor;
+  font-size: 11px;
+}
+
+/* Sidebar examples list */
+QListView#examplesListView {
+  background-color: transparent;
+  border: none;
+}
+
+QGroupBox#FirstStartWidget {
+  background-color: transparent;
+  border: none;
+  border-radius: 0px;
+  margin: 0px;
+}
+
+QLabel#firstStartIntro {
+  color: @TextForegroundColor;
+  font-size: 13px;
+}
+
+QLabel[firstStartRole="section"] {
+  color: @TextForegroundColor;
+  font-size: 16px;
+  font-weight: bold;
+  padding-top: 4px;
+}
+
+QLabel[firstStartRole="subsection"] {
+  color: @TextForegroundColor;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+QLabel[firstStartRole="field"] {
+  color: @TextForegroundColor;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+QLabel[firstStartRole="helper"] {
+  color: @TextDisabledColor;
+  font-size: 11px;
+}
+
+QPushButton#firstStartPrimaryButton {
+  min-width: 164px;
+  font-weight: 600;
+}
+
+QPushButton#firstStartSecondaryButton {
+  min-width: 144px;
+}
+
+QListView[startFileCardList="true"] {
+  background-color: transparent;
+  border: none;
+}
+
+/* Learn links */
+QPushButton#learnLink {
+  text-align: left;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: @AccentColor;
+}
+
+QPushButton#learnLink:hover {
+  color: @AccentColor;
+  text-decoration: underline;
+}
+
+QPushButton#thumbnailWidget {
   background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 @ButtonTopBackgroundColor,stop:1 @ButtonBottomBackgroundColor);
-  border-radius: 8px;
+  border-radius: @InputFieldBorderRadius;
   border: 1px solid @GeneralBorderColor;
 }
 
-QWidget#thumbnailWidget[state="hovered"] {
-  border: 1px solid @AccentColor;
+QPushButton#thumbnailWidget:hover {
+  background-color: @GeneralBackgroundHoverColor;
 }
 
-QWidget#thumbnailWidget[state="pressed"] {
-  border: 1px solid @AccentColor;
+QPushButton#thumbnailWidget:pressed,
+QPushButton#thumbnailWidget:selected {
+  border: 1px solid @GeneralBorderHoverColor;
 }
 
 /**

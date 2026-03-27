@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 /****************************************************************************
  *                                                                          *
- *   Copyright (c) 2024 The FreeCAD Project Association AISBL               *
+ *   Copyright (c) 2026 The FreeCAD Project Association AISBL               *
  *                                                                          *
  *   This file is part of FreeCAD.                                          *
  *                                                                          *
@@ -23,54 +23,74 @@
 
 #pragma once
 
-#include <QWidget>
-#include <gsl/pointers>
+#include <Mod/Start/StartGlobal.h>
 
-class QLabel;
-class QComboBox;
+#include <QPointer>
+#include <QWidget>
+
+class QContextMenuEvent;
+class QEvent;
+class QFrame;
+class QHideEvent;
+class QKeyEvent;
+class QKeySequence;
+class QMouseEvent;
+class QScrollArea;
+class QShortcutEvent;
+class QShowEvent;
+class QWheelEvent;
 
 namespace StartGui
 {
 
-class GeneralSettingsWidget: public QWidget
+class FirstStartWidget;
+
+class StartGuiExport StartupWizardOverlay: public QWidget
 {
     Q_OBJECT
-public:
-    explicit GeneralSettingsWidget(QWidget* parent = nullptr);
-    void refreshFromPreferences();
 
+public:
+    explicit StartupWizardOverlay(QWidget* parent = nullptr);
+    ~StartupWizardOverlay() override;
+
+    void refreshFromPreferences();
+    void showOverlay();
+    void hideOverlay(bool restoreFocus = true);
+
+Q_SIGNALS:
+    void dismissed();
+    void advancedSettingsRequested();
+
+protected:
+    void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* object, QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
-    void retranslateUi();
-
+    void installFilters();
+    void removeFilters();
     void setupUi();
-    gsl::owner<QComboBox*> createLanguageComboBox();
-    gsl::owner<QComboBox*> createUnitSystemComboBox();
-    gsl::owner<QComboBox*> createNavigationStyleComboBox();
-    gsl::owner<QComboBox*> createOrbitStyleComboBox();
-    void populateUnitSystemComboBox();
-    void populateNavigationStyleComboBox();
-    void populateOrbitStyleComboBox();
+    void syncGeometryAndRaise();
+    bool isAllowedShortcut(const QKeyEvent* event) const;
+    bool isAllowedShortcut(const QShortcutEvent* event) const;
+    bool isAllowedShortcut(const QKeySequence& sequence) const;
+    bool belongsToMainWindow(const QObject* object) const;
+    QWidget* focusTarget() const;
 
-    void onLanguageChanged(int index);
-    void onUnitSystemChanged(int index);
-    void onNavigationStyleChanged(int index);
-    void onOrbitStyleChanged(int index);
-
-    // Non-owning pointers to things that need to be re-translated when the language changes
-    QLabel* _languageLabel;
-    QLabel* _unitSystemLabel;
-    QLabel* _navigationStyleLabel;
-    QLabel* _orbitStyleLabel;
-    QLabel* _languageHelperLabel;
-    QLabel* _unitSystemHelperLabel;
-    QLabel* _navigationStyleHelperLabel;
-    QLabel* _orbitStyleHelperLabel;
-    QComboBox* _languageComboBox;
-    QComboBox* _unitSystemComboBox;
-    QComboBox* _navigationStyleComboBox;
-    QComboBox* _orbitStyleComboBox;
+    QScrollArea* _scrollArea;
+    QFrame* _panel;
+    FirstStartWidget* _firstStartWidget;
+    QPointer<QWidget> _previousFocusWidget;
+    bool _filtersInstalled;
+    bool _restoreFocusOnHide;
 };
 
 }  // namespace StartGui

@@ -26,6 +26,7 @@
 #include <App/Application.h>
 #include "../App/DisplayedFilesModel.h"
 #include <algorithm>
+#include <cmath>
 
 namespace StartGui
 {
@@ -33,6 +34,8 @@ namespace StartGui
 FileCardView::FileCardView(QWidget* parent)
     : QListView(parent)
 {
+    setFrameShape(QFrame::NoFrame);
+    setContentsMargins(0, 0, 0, 0);
     QSizePolicy sizePolicy(QSizePolicy::Policy::MinimumExpanding, QSizePolicy::Policy::MinimumExpanding);
     sizePolicy.setHeightForWidth(true);
     setSizePolicy(sizePolicy);
@@ -49,7 +52,7 @@ FileCardView::FileCardView(QWidget* parent)
     );
     m_cardSpacing = static_cast<int>(hGrp->GetInt("FileCardSpacing", 16));  // NOLINT
 
-    setSpacing(m_cardSpacing);
+    setSpacing(0);
 }
 
 int FileCardView::heightForWidth(int width) const
@@ -59,15 +62,24 @@ int FileCardView::heightForWidth(int width) const
     if (!model || !delegate) {
         return 0;
     }
+
     int numCards = model->rowCount();
-    auto cardSize = delegate->sizeHint(QStyleOptionViewItem(), model->index(0, 0));
-    int cardsPerRow = std::max(1, static_cast<int>(width / (cardSize.width() + m_cardSpacing)));
+    if (numCards == 0) {
+        return 0;
+    }
+
+    auto cardCellSize = itemCellSize();
+    if (cardCellSize.isEmpty()) {
+        return 0;
+    }
+
+    int cardsPerRow = std::max(1, static_cast<int>((width + m_cardSpacing) / cardCellSize.width()));
     int numRows = static_cast<int>(
         ceil(static_cast<double>(numCards) / static_cast<double>(cardsPerRow))
     );
-    int neededHeight = numRows * cardSize.height();
+    int neededHeight = numRows * cardCellSize.height();
     constexpr int extra = 4;  // avoid tiny scrollbars
-    return neededHeight + m_cardSpacing * (numRows - 1) + 2 * m_cardSpacing + extra;
+    return neededHeight + extra;
 }
 
 QSize FileCardView::sizeHint() const
@@ -75,15 +87,34 @@ QSize FileCardView::sizeHint() const
     auto model = this->model();
     auto delegate = this->itemDelegate();
     if (!model || !delegate) {
-        // The model and/or delegate have not been set yet, this was an early startup call
-        return {m_cardSpacing, m_cardSpacing};
+        return {};
     }
+
     int numCards = model->rowCount();
-    auto cardSize = delegate->sizeHint(QStyleOptionViewItem(), model->index(0, 0));
+    if (numCards == 0) {
+        return {};
+    }
+
+    auto cardCellSize = itemCellSize();
+    if (cardCellSize.isEmpty()) {
+        return {};
+    }
+
     return {
-        (cardSize.width() + m_cardSpacing) * numCards + m_cardSpacing,
-        cardSize.height() + 2 * m_cardSpacing
+        cardCellSize.width() * numCards,
+        cardCellSize.height()
     };
+}
+
+QSize FileCardView::itemCellSize() const
+{
+    auto model = this->model();
+    auto delegate = this->itemDelegate();
+    if (!model || !delegate) {
+        return {};
+    }
+
+    return delegate->sizeHint(QStyleOptionViewItem(), model->index(0, 0));
 }
 
 }  // namespace StartGui

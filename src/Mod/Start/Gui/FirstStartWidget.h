@@ -40,18 +40,24 @@ class FirstStartWidget: public QGroupBox
     Q_OBJECT
 public:
     explicit FirstStartWidget(QWidget* parent = nullptr);
+    void refreshFromPreferences();
     bool eventFilter(QObject* object, QEvent* event) override;
     Q_SIGNAL void dismissed();
+    Q_SIGNAL void advancedSettingsRequested();
 
 private:
     void retranslateUi();
     void setupUi();
+    void updateWordmark();
+    void onAdvancedSettingsClicked();
 
     ThemeSelectorWidget* _themeSelectorWidget;
     GeneralSettingsWidget* _generalSettingsWidget;
 
-    QLabel* _welcomeLabel;
+    QLabel* _wordmarkLabel;
     QLabel* _descriptionLabel;
+    QWidget* _buttonRowWidget;
+    QPushButton* _advancedSettingsButton;
     QPushButton* _doneButton;
 };
 
