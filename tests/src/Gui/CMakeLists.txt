@@ -12,7 +12,14 @@ add_executable(Gui_tests_run
         StyleParameters/ParameterManagerTest.cpp
         StyleParameters/YamlParameterSourceTest.cpp
         InputHintTest.cpp
+        WidgetBinder_test.cpp
 )
+
+if(TARGET FCComponentGallery)
+    target_compile_definitions(Gui_tests_run PRIVATE
+        FC_GALLERY_EXECUTABLE="$<TARGET_FILE:FCComponentGallery>"
+    )
+endif()
 
 # Qt tests
 setup_qt_test(QuantitySpinBox)

@@ -14,6 +14,7 @@ endif()
 add_subdirectory(Stylesheets)
 add_subdirectory(PreferencePacks)
 add_subdirectory(PreferencePackTemplates)
+include(Adapters/CMakeLists.txt)
 
 if(BUILD_WITH_CONDA)
     add_definitions(-DFC_CONDA)
@@ -101,6 +102,7 @@ endif(MSVC)
 if(MSVC)
     set(FreeCADGui_LIBS
          FreeCADApp
+         FCComponentLib
          libfastsignals
          ${OPENGL_gl_LIBRARY}
     )
@@ -114,6 +116,7 @@ if(MSVC)
 else(MSVC)
     set(FreeCADGui_LIBS
         FreeCADApp
+        FCComponentLib
         libfastsignals
         ${Boost_LIBRARIES}
         ${OPENGL_gl_LIBRARY}
@@ -1488,6 +1491,7 @@ SET(FreeCADGui_SRCS
     ${Language_SRCS}
     ${Propertyeditor_SRCS}
     ${Task_View_SRCS}
+    ${Adapters_SRCS}
     ${qsintActionPanel_SRCS}
     ${Resource_SRCS}
     ${Quarter_SRCS}

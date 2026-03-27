@@ -39,8 +39,10 @@
 #include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Interpreter.h>
+#include <FCComponentLib/Components/ComponentRegistry.h>
 
 #include "WidgetFactory.h"
+#include "Adapters/WidgetBinder.h"
 #include "PrefWidgets.h"
 #include "PythonWrapper.h"
 #include "UiLoader.h"
@@ -75,6 +77,10 @@ QWidget* WidgetFactoryInst::createWidget(const char* sName, QWidget* parent) con
 {
     auto w = static_cast<QWidget*>(Produce(sName));
 
+    if (!w) {
+        w = FcComponents::ComponentRegistry::instance().create(sName, parent);
+    }
+
     // this widget class is not registered
     if (!w) {
 #ifdef FC_DEBUG
@@ -105,6 +111,8 @@ QWidget* WidgetFactoryInst::createWidget(const char* sName, QWidget* parent) con
     if (parent) {
         w->setParent(parent);
     }
+
+    Adapters::WidgetBinder::instance().attach(w);
 
     return w;
 }

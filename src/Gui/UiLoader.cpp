@@ -34,6 +34,7 @@
 #include <Base/Interpreter.h>
 
 #include "UiLoader.h"
+#include "Adapters/WidgetBinder.h"
 #include "PythonWrapper.h"
 #include "WidgetFactory.h"
 
@@ -45,10 +46,7 @@ namespace
 
 QWidget* createFromWidgetFactory(const QString& className, QWidget* parent, const QString& name)
 {
-    QWidget* widget = nullptr;
-    if (WidgetFactory().CanProduce((const char*)className.toLatin1())) {
-        widget = WidgetFactory().createWidget((const char*)className.toLatin1(), parent);
-    }
+    QWidget* widget = WidgetFactory().createWidget((const char*)className.toLatin1(), parent);
     if (widget) {
         widget->setObjectName(name);
     }
@@ -528,11 +526,20 @@ UiLoader::~UiLoader() = default;
 
 QWidget* UiLoader::createWidget(const QString& className, QWidget* parent, const QString& name)
 {
+    QWidget* widget = nullptr;
+
     if (this->cw.contains(className)) {
-        return QUiLoader::createWidget(className, parent, name);
+        widget = QUiLoader::createWidget(className, parent, name);
+    }
+    else {
+        widget = createFromWidgetFactory(className, parent, name);
     }
 
-    return createFromWidgetFactory(className, parent, name);
+    if (widget) {
+        Adapters::WidgetBinder::instance().attach(widget);
+    }
+
+    return widget;
 }
 
 // ----------------------------------------------------

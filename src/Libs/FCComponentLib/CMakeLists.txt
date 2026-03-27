@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # Standalone build detection
-if(NOT TARGET FreeCADBase)
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     project(FCComponentLib VERSION 0.1 LANGUAGES CXX)
     set(CMAKE_CXX_STANDARD 23)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
