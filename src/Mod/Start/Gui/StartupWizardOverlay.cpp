@@ -23,17 +23,21 @@
 
 #include "PreCompiled.h"
 
+#include <algorithm>
+
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QLayout>
 #include <QMainWindow>
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QShortcutEvent>
 #include <QSizePolicy>
 #include <QVBoxLayout>
 #include <QWheelEvent>
@@ -52,6 +56,17 @@ namespace
 constexpr int overlayMargin = 24;
 constexpr int verticalMargin = 24;
 
+bool matchesStandardShortcut(
+    const QKeySequence& sequence,
+    QKeySequence::StandardKey standardKey
+)
+{
+    const auto bindings = QKeySequence::keyBindings(standardKey);
+    return std::any_of(bindings.cbegin(), bindings.cend(), [&sequence](const QKeySequence& binding) {
+        return !binding.isEmpty() && sequence.matches(binding) == QKeySequence::ExactMatch;
+    });
+}
+
 }  // namespace
 
 StartupWizardOverlay::StartupWizardOverlay(QWidget* parent)
@@ -59,12 +74,18 @@ StartupWizardOverlay::StartupWizardOverlay(QWidget* parent)
     , _scrollArea {nullptr}
     , _panel {nullptr}
     , _firstStartWidget {nullptr}
+    , _filtersInstalled {false}
+    , _restoreFocusOnHide {true}
 {
     setObjectName(QStringLiteral("startupWizardOverlay"));
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_StyledBackground, true);
     setupUi();
-    qApp->installEventFilter(this);
+}
+
+StartupWizardOverlay::~StartupWizardOverlay()
+{
+    removeFilters();
 }
 
 void StartupWizardOverlay::setupUi()
@@ -96,7 +117,7 @@ void StartupWizardOverlay::setupUi()
     _panel->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 
     auto panelLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(_panel));
-    panelLayout->setContentsMargins(12, 12, 12, 12);
+    panelLayout->setContentsMargins(0, 0, 0, 0);
     panelLayout->setSpacing(0);
 
     _firstStartWidget = gsl::owner<FirstStartWidget*>(new FirstStartWidget(_panel));
@@ -134,6 +155,7 @@ void StartupWizardOverlay::showOverlay()
         _previousFocusWidget = window->focusWidget();
     }
 
+    _restoreFocusOnHide = true;
     refreshFromPreferences();
     syncGeometryAndRaise();
     show();
@@ -145,6 +167,21 @@ void StartupWizardOverlay::showOverlay()
     else {
         setFocus(Qt::OtherFocusReason);
     }
+}
+
+void StartupWizardOverlay::hideOverlay(bool restoreFocus)
+{
+    _restoreFocusOnHide = restoreFocus;
+    hide();
+}
+
+void StartupWizardOverlay::changeEvent(QEvent* event)
+{
+    if ((event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange) && isVisible()) {
+        syncGeometryAndRaise();
+    }
+
+    QWidget::changeEvent(event);
 }
 
 bool StartupWizardOverlay::eventFilter(QObject* object, QEvent* event)
@@ -169,39 +206,18 @@ bool StartupWizardOverlay::eventFilter(QObject* object, QEvent* event)
         return QWidget::eventFilter(object, event);
     }
 
-    if (object == this
-        && (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange)) {
-        syncGeometryAndRaise();
-    }
-
     if (event->type() == QEvent::ShortcutOverride) {
-        if (belongsToOverlay(object)) {
-            static_cast<QKeyEvent*>(event)->accept();
-            return false;
-        }
-        if (belongsToMainWindow(object)) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (belongsToMainWindow(object) && !isAllowedShortcut(keyEvent)) {
+            keyEvent->accept();
             return true;
         }
     }
 
-    if (event->type() == QEvent::Shortcut && belongsToMainWindow(object)
-        && !belongsToOverlay(object)) {
-        return true;
-    }
-
-    if (belongsToMainWindow(object) && !belongsToOverlay(object)) {
-        switch (event->type()) {
-            case QEvent::MouseButtonPress:
-            case QEvent::MouseButtonRelease:
-            case QEvent::MouseButtonDblClick:
-            case QEvent::MouseMove:
-            case QEvent::Wheel:
-            case QEvent::ContextMenu:
-            case QEvent::KeyPress:
-            case QEvent::KeyRelease:
-                return true;
-            default:
-                break;
+    if (event->type() == QEvent::Shortcut) {
+        auto* shortcutEvent = static_cast<QShortcutEvent*>(event);
+        if (belongsToMainWindow(object) && !isAllowedShortcut(shortcutEvent)) {
+            return true;
         }
     }
 
@@ -210,22 +226,28 @@ bool StartupWizardOverlay::eventFilter(QObject* object, QEvent* event)
 
 void StartupWizardOverlay::showEvent(QShowEvent* event)
 {
+    installFilters();
     syncGeometryAndRaise();
     QWidget::showEvent(event);
 }
 
 void StartupWizardOverlay::hideEvent(QHideEvent* event)
 {
+    removeFilters();
     QWidget::hideEvent(event);
 
-    if (_previousFocusWidget && _previousFocusWidget->isVisible() && _previousFocusWidget->isEnabled()) {
+    if (_restoreFocusOnHide && _previousFocusWidget && _previousFocusWidget->isVisible()
+        && _previousFocusWidget->isEnabled()) {
         _previousFocusWidget->setFocus(Qt::OtherFocusReason);
     }
-    else if (auto* window = parentWidget()) {
-        window->setFocus(Qt::OtherFocusReason);
+    else if (_restoreFocusOnHide) {
+        if (auto* window = parentWidget()) {
+            window->setFocus(Qt::OtherFocusReason);
+        }
     }
 
     _previousFocusWidget.clear();
+    _restoreFocusOnHide = true;
 }
 
 void StartupWizardOverlay::mousePressEvent(QMouseEvent* event)
@@ -255,12 +277,46 @@ void StartupWizardOverlay::contextMenuEvent(QContextMenuEvent* event)
 
 void StartupWizardOverlay::keyPressEvent(QKeyEvent* event)
 {
+    if (isAllowedShortcut(event)) {
+        event->ignore();
+        return;
+    }
+
     event->accept();
 }
 
 void StartupWizardOverlay::keyReleaseEvent(QKeyEvent* event)
 {
+    if (isAllowedShortcut(event)) {
+        event->ignore();
+        return;
+    }
+
     event->accept();
+}
+
+void StartupWizardOverlay::installFilters()
+{
+    if (_filtersInstalled) {
+        return;
+    }
+
+    if (qApp) {
+        qApp->installEventFilter(this);
+    }
+    _filtersInstalled = true;
+}
+
+void StartupWizardOverlay::removeFilters()
+{
+    if (!_filtersInstalled) {
+        return;
+    }
+
+    if (qApp) {
+        qApp->removeEventFilter(this);
+    }
+    _filtersInstalled = false;
 }
 
 void StartupWizardOverlay::syncGeometryAndRaise()
@@ -271,22 +327,55 @@ void StartupWizardOverlay::syncGeometryAndRaise()
     }
 }
 
+bool StartupWizardOverlay::isAllowedShortcut(const QKeyEvent* event) const
+{
+    if (!event) {
+        return false;
+    }
+
+    return isAllowedShortcut(QKeySequence(event->keyCombination()));
+}
+
+bool StartupWizardOverlay::isAllowedShortcut(const QShortcutEvent* event) const
+{
+    if (!event) {
+        return false;
+    }
+
+    return isAllowedShortcut(event->key());
+}
+
+bool StartupWizardOverlay::isAllowedShortcut(const QKeySequence& sequence) const
+{
+    if (sequence.isEmpty()) {
+        return false;
+    }
+
+    if (matchesStandardShortcut(sequence, QKeySequence::Quit)
+        || matchesStandardShortcut(sequence, QKeySequence::Preferences)
+        || matchesStandardShortcut(sequence, QKeySequence::Close)) {
+        return true;
+    }
+
+#ifdef FC_OS_MACOSX
+    if (sequence.matches(QKeySequence(QKeyCombination(Qt::MetaModifier, Qt::Key_H)))
+            == QKeySequence::ExactMatch
+        || sequence.matches(QKeySequence(QKeyCombination(Qt::MetaModifier, Qt::Key_M)))
+            == QKeySequence::ExactMatch
+        || sequence.matches(QKeySequence(QKeyCombination(Qt::MetaModifier | Qt::AltModifier, Qt::Key_H)))
+            == QKeySequence::ExactMatch) {
+        return true;
+    }
+#endif
+
+    return false;
+}
+
 bool StartupWizardOverlay::belongsToMainWindow(const QObject* object) const
 {
     auto* window = parentWidget();
     for (auto current = object; current != nullptr; current = current->parent()) {
         if (current == window) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool StartupWizardOverlay::belongsToOverlay(const QObject* object) const
-{
-    for (auto current = object; current != nullptr; current = current->parent()) {
-        if (current == this) {
             return true;
         }
     }

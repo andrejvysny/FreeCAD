@@ -193,7 +193,7 @@ void ThemeSelectorWidget::setupUi()
 {
     auto* outerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
     outerLayout->setContentsMargins(0, 0, 0, 0);
-    outerLayout->setSpacing(6);
+    outerLayout->setSpacing(8);
 
     _titleLabel = gsl::owner<QLabel*>(new QLabel);
     _titleLabel->setObjectName(QStringLiteral("firstStartAppearanceLabel"));
@@ -216,7 +216,7 @@ void ThemeSelectorWidget::setupUi()
     themeCardsWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
     auto* buttonLayout = gsl::owner<QHBoxLayout*>(new QHBoxLayout(themeCardsWidget));
     buttonLayout->setContentsMargins(0, 0, 0, 0);
-    buttonLayout->setSpacing(10);
+    buttonLayout->setSpacing(12);
 
     outerLayout->addWidget(_titleLabel);
     outerLayout->addWidget(_helperLabel);

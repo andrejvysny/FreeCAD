@@ -2697,7 +2697,10 @@ QListView#examplesListView {
 }
 
 QGroupBox#FirstStartWidget {
-  margin-top: 0px;
+  background-color: transparent;
+  border: none;
+  border-radius: 0px;
+  margin: 0px;
 }
 
 QLabel#firstStartIntro {

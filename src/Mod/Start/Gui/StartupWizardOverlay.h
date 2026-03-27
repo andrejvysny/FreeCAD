@@ -29,11 +29,14 @@
 #include <QWidget>
 
 class QContextMenuEvent;
+class QEvent;
 class QFrame;
 class QHideEvent;
 class QKeyEvent;
+class QKeySequence;
 class QMouseEvent;
 class QScrollArea;
+class QShortcutEvent;
 class QShowEvent;
 class QWheelEvent;
 
@@ -48,15 +51,18 @@ class StartGuiExport StartupWizardOverlay: public QWidget
 
 public:
     explicit StartupWizardOverlay(QWidget* parent = nullptr);
+    ~StartupWizardOverlay() override;
 
     void refreshFromPreferences();
     void showOverlay();
+    void hideOverlay(bool restoreFocus = true);
 
 Q_SIGNALS:
     void dismissed();
     void advancedSettingsRequested();
 
 protected:
+    void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* object, QEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -69,16 +75,22 @@ protected:
     void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
+    void installFilters();
+    void removeFilters();
     void setupUi();
     void syncGeometryAndRaise();
+    bool isAllowedShortcut(const QKeyEvent* event) const;
+    bool isAllowedShortcut(const QShortcutEvent* event) const;
+    bool isAllowedShortcut(const QKeySequence& sequence) const;
     bool belongsToMainWindow(const QObject* object) const;
-    bool belongsToOverlay(const QObject* object) const;
     QWidget* focusTarget() const;
 
     QScrollArea* _scrollArea;
     QFrame* _panel;
     FirstStartWidget* _firstStartWidget;
     QPointer<QWidget> _previousFocusWidget;
+    bool _filtersInstalled;
+    bool _restoreFocusOnHide;
 };
 
 }  // namespace StartGui

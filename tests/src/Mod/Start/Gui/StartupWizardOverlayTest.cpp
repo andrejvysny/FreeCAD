@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <QApplication>
+#include <QDialog>
 #include <QEvent>
 #include <QPointer>
 #include <QPushButton>
@@ -30,6 +31,12 @@ bool isDescendantOf(const QWidget* widget, const QWidget* ancestor)
     return false;
 }
 
+QKeySequence firstStandardBinding(QKeySequence::StandardKey standardKey)
+{
+    const auto bindings = QKeySequence::keyBindings(standardKey);
+    return bindings.isEmpty() ? QKeySequence() : bindings.constFirst();
+}
+
 class TestStartupWizardController: public StartGui::StartupWizardController
 {
 public:
@@ -42,6 +49,9 @@ public:
 
     QStringList commandsRun;
     bool commandsAvailable = true;
+    QPointer<QWidget> focusBeforeCommand;
+    QPointer<QWidget> focusOnCommandRun;
+    QPointer<QDialog> modalToShowOnStart;
 
 protected:
     QWidget* getMainWindow() const override
@@ -60,7 +70,21 @@ protected:
             return false;
         }
 
-        commandsRun << QString::fromLatin1(name);
+        const QString commandName = QString::fromLatin1(name);
+        commandsRun << commandName;
+
+        if (commandName == QStringLiteral("Start_Start") && modalToShowOnStart) {
+            modalToShowOnStart->show();
+            qApp->processEvents();
+        }
+
+        if (commandName == QStringLiteral("Std_DlgPreferences")) {
+            focusBeforeCommand = testMainWindow ? testMainWindow->focusWidget() : nullptr;
+            if (focusOnCommandRun) {
+                focusOnCommandRun->setFocus(Qt::OtherFocusReason);
+            }
+        }
+
         return true;
     }
 
@@ -159,7 +183,7 @@ private Q_SLOTS:
         QVERIFY(overlay.isVisible());
     }
 
-    void overlayBlocksUnderlyingShortcuts()  // NOLINT
+    void overlayBlocksNonAppShortcuts()  // NOLINT
     {
         Gui::MainWindow mainWindow;
         mainWindow.resize(1200, 800);
@@ -179,10 +203,103 @@ private Q_SLOTS:
         auto* primaryButton = overlay.findChild<QPushButton*>(QStringLiteral("firstStartPrimaryButton"));
         QVERIFY(primaryButton);
 
-        QTest::keyClick(primaryButton, Qt::Key_J, Qt::ControlModifier);
+        QTest::keySequence(primaryButton, QKeySequence(QStringLiteral("Ctrl+J")));
         qApp->processEvents();
 
         QCOMPARE(shortcutTriggered, 0);
+    }
+
+    void quitShortcutRemainsAvailable()  // NOLINT
+    {
+        const QKeySequence quitSequence = firstStandardBinding(QKeySequence::Quit);
+        if (quitSequence.isEmpty()) {
+            QSKIP("No quit shortcut binding on this platform");
+        }
+
+        Gui::MainWindow mainWindow;
+        mainWindow.resize(1200, 800);
+        mainWindow.setProperty("eventLoop", true);
+        mainWindow.show();
+        qApp->processEvents();
+
+        int shortcutTriggered = 0;
+        QShortcut shortcut(quitSequence, &mainWindow);
+        shortcut.setContext(Qt::ApplicationShortcut);
+        connect(&shortcut, &QShortcut::activated, this, [&shortcutTriggered]() { ++shortcutTriggered; });
+
+        StartGui::StartupWizardOverlay overlay(&mainWindow);
+        overlay.showOverlay();
+        qApp->processEvents();
+
+        auto* primaryButton = overlay.findChild<QPushButton*>(QStringLiteral("firstStartPrimaryButton"));
+        QVERIFY(primaryButton);
+
+        QTest::keySequence(primaryButton, quitSequence);
+        qApp->processEvents();
+
+        QCOMPARE(shortcutTriggered, 1);
+    }
+
+    void preferencesShortcutRemainsAvailable()  // NOLINT
+    {
+        const QKeySequence preferencesSequence = firstStandardBinding(QKeySequence::Preferences);
+        if (preferencesSequence.isEmpty()) {
+            QSKIP("No preferences shortcut binding on this platform");
+        }
+
+        Gui::MainWindow mainWindow;
+        mainWindow.resize(1200, 800);
+        mainWindow.setProperty("eventLoop", true);
+        mainWindow.show();
+        qApp->processEvents();
+
+        int shortcutTriggered = 0;
+        QShortcut shortcut(preferencesSequence, &mainWindow);
+        shortcut.setContext(Qt::ApplicationShortcut);
+        connect(&shortcut, &QShortcut::activated, this, [&shortcutTriggered]() { ++shortcutTriggered; });
+
+        StartGui::StartupWizardOverlay overlay(&mainWindow);
+        overlay.showOverlay();
+        qApp->processEvents();
+
+        auto* primaryButton = overlay.findChild<QPushButton*>(QStringLiteral("firstStartPrimaryButton"));
+        QVERIFY(primaryButton);
+
+        QTest::keySequence(primaryButton, preferencesSequence);
+        qApp->processEvents();
+
+        QCOMPARE(shortcutTriggered, 1);
+    }
+
+    void closeShortcutRemainsAvailable()  // NOLINT
+    {
+        const QKeySequence closeSequence = firstStandardBinding(QKeySequence::Close);
+        if (closeSequence.isEmpty()) {
+            QSKIP("No close shortcut binding on this platform");
+        }
+
+        Gui::MainWindow mainWindow;
+        mainWindow.resize(1200, 800);
+        mainWindow.setProperty("eventLoop", true);
+        mainWindow.show();
+        qApp->processEvents();
+
+        int shortcutTriggered = 0;
+        QShortcut shortcut(closeSequence, &mainWindow);
+        shortcut.setContext(Qt::ApplicationShortcut);
+        connect(&shortcut, &QShortcut::activated, this, [&shortcutTriggered]() { ++shortcutTriggered; });
+
+        StartGui::StartupWizardOverlay overlay(&mainWindow);
+        overlay.showOverlay();
+        qApp->processEvents();
+
+        auto* primaryButton = overlay.findChild<QPushButton*>(QStringLiteral("firstStartPrimaryButton"));
+        QVERIFY(primaryButton);
+
+        QTest::keySequence(primaryButton, closeSequence);
+        qApp->processEvents();
+
+        QCOMPARE(shortcutTriggered, 1);
     }
 
     void startupOpensStartPageAndOverlayWhenConfigured()  // NOLINT
@@ -273,6 +390,45 @@ private Q_SLOTS:
         QVERIFY(!startPreferences->GetBool("FirstStart2024", true));
     }
 
+    void hiddenOverlayStopsBlockingShortcuts()  // NOLINT
+    {
+        startPreferences->SetBool("ShowOnStartup", false);
+        startPreferences->SetBool("FirstStart2024", false);
+
+        Gui::MainWindow mainWindow;
+        mainWindow.resize(1280, 840);
+        mainWindow.setProperty("eventLoop", true);
+        mainWindow.show();
+        qApp->processEvents();
+
+        int shortcutTriggered = 0;
+        QShortcut shortcut(QKeySequence(QStringLiteral("Ctrl+J")), &mainWindow);
+        shortcut.setContext(Qt::ApplicationShortcut);
+        connect(&shortcut, &QShortcut::activated, this, [&shortcutTriggered]() { ++shortcutTriggered; });
+
+        TestStartupWizardController controller(&mainWindow);
+        controller.showManual();
+        qApp->processEvents();
+
+        auto* primaryButton =
+            controller.overlay()->findChild<QPushButton*>(QStringLiteral("firstStartPrimaryButton"));
+        QVERIFY(primaryButton);
+
+        QTest::keySequence(primaryButton, QKeySequence(QStringLiteral("Ctrl+J")));
+        qApp->processEvents();
+        QCOMPARE(shortcutTriggered, 0);
+
+        QTest::mouseClick(primaryButton, Qt::LeftButton);
+        qApp->processEvents();
+
+        QVERIFY(!controller.overlay()->isVisible());
+
+        QTest::keySequence(&mainWindow, QKeySequence(QStringLiteral("Ctrl+J")));
+        qApp->processEvents();
+
+        QCOMPARE(shortcutTriggered, 1);
+    }
+
     void advancedSettingsClosesOverlayWithoutClearingFirstStart()  // NOLINT
     {
         startPreferences->SetBool("ShowOnStartup", false);
@@ -284,7 +440,17 @@ private Q_SLOTS:
         mainWindow.show();
         qApp->processEvents();
 
+        QPushButton priorFocus(QStringLiteral("prior"), &mainWindow);
+        priorFocus.setGeometry(20, 20, 80, 24);
+        priorFocus.show();
+        priorFocus.setFocus(Qt::OtherFocusReason);
+
+        QPushButton preferencesFocus(QStringLiteral("preferences"), &mainWindow);
+        preferencesFocus.setGeometry(120, 20, 100, 24);
+        preferencesFocus.show();
+
         TestStartupWizardController controller(&mainWindow);
+        controller.focusOnCommandRun = &preferencesFocus;
         controller.showManual();
         qApp->processEvents();
 
@@ -296,8 +462,68 @@ private Q_SLOTS:
         qApp->processEvents();
 
         QCOMPARE(controller.commandsRun, QStringList {QStringLiteral("Std_DlgPreferences")});
+        QVERIFY(controller.focusBeforeCommand != &priorFocus);
+        QVERIFY(mainWindow.focusWidget() == &preferencesFocus);
         QVERIFY(!controller.overlay()->isVisible());
         QVERIFY(startPreferences->GetBool("FirstStart2024", false));
+    }
+
+    void manualShowDoesNotAppearOverActiveModalDialog()  // NOLINT
+    {
+        startPreferences->SetBool("ShowOnStartup", false);
+        startPreferences->SetBool("FirstStart2024", false);
+
+        Gui::MainWindow mainWindow;
+        mainWindow.resize(1280, 840);
+        mainWindow.setProperty("eventLoop", true);
+        mainWindow.show();
+        qApp->processEvents();
+
+        QDialog modal(&mainWindow);
+        modal.setWindowModality(Qt::ApplicationModal);
+        modal.show();
+        qApp->processEvents();
+
+        QVERIFY(qApp->activeModalWidget() == &modal);
+
+        TestStartupWizardController controller(&mainWindow);
+        controller.showManual();
+        qApp->processEvents();
+
+        QVERIFY(!controller.overlay());
+    }
+
+    void startupDefersOverlayUntilPostStartModalClears()  // NOLINT
+    {
+        startPreferences->SetBool("ShowOnStartup", true);
+        startPreferences->SetBool("FirstStart2024", true);
+
+        Gui::MainWindow mainWindow;
+        mainWindow.resize(1280, 840);
+        mainWindow.setProperty("eventLoop", true);
+        mainWindow.show();
+        qApp->processEvents();
+
+        QDialog modal(&mainWindow);
+        modal.setWindowModality(Qt::ApplicationModal);
+
+        TestStartupWizardController controller(&mainWindow);
+        controller.modalToShowOnStart = &modal;
+        controller.attemptStartup();
+        qApp->processEvents();
+
+        QCOMPARE(controller.commandsRun, QStringList {QStringLiteral("Start_Start")});
+        QVERIFY(qApp->activeModalWidget() == &modal);
+        QVERIFY(!controller.overlay());
+
+        modal.hide();
+        qApp->processEvents();
+
+        controller.attemptStartup();
+        qApp->processEvents();
+
+        QVERIFY(controller.overlay());
+        QVERIFY(controller.overlay()->isVisible());
     }
 
 private:

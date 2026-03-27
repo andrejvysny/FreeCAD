@@ -59,6 +59,7 @@ protected:
 
 private:
     void ensureOverlay();
+    bool hasBlockingModalWidget() const;
     bool shouldLaunchStartPage() const;
     bool isFirstStartPending() const;
     void markFirstStartCompleted() const;
@@ -71,6 +72,7 @@ private:
     QPointer<StartupWizardOverlay> _overlay;
     bool _startupScheduled;
     bool _startupHandled;
+    bool _startPageLaunchRequested;
 };
 
 }  // namespace StartGui

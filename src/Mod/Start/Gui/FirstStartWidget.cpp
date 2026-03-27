@@ -95,13 +95,13 @@ void FirstStartWidget::setupUi()
 
     auto outerLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
     outerLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinAndMaxSize);
-    outerLayout->setContentsMargins(20, 18, 20, 18);
-    outerLayout->setSpacing(10);
+    outerLayout->setContentsMargins(20, 12, 20, 18);
+    outerLayout->setSpacing(14);
     outerLayout->setAlignment(Qt::AlignTop);
 
     _wordmarkLabel = gsl::owner<QLabel*>(new QLabel(this));
     _wordmarkLabel->setObjectName(QStringLiteral("firstStartWordmark"));
-    _wordmarkLabel->setFixedHeight(60);
+    _wordmarkLabel->setFixedHeight(54);
     _wordmarkLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
     outerLayout->addWidget(_wordmarkLabel);
 
@@ -116,7 +116,7 @@ void FirstStartWidget::setupUi()
     _generalSettingsWidget->setMaximumWidth(modalMaximumWidth - 40);
     outerLayout->addWidget(_generalSettingsWidget);
 
-    outerLayout->addSpacing(4);
+    outerLayout->addSpacing(8);
 
     _themeSelectorWidget = gsl::owner<ThemeSelectorWidget*>(new ThemeSelectorWidget(this));
     outerLayout->addWidget(_themeSelectorWidget);
@@ -139,7 +139,7 @@ void FirstStartWidget::setupUi()
     );
 
     auto buttonBar = gsl::owner<QHBoxLayout*>(new QHBoxLayout(_buttonRowWidget));
-    buttonBar->setContentsMargins(0, 2, 0, 0);
+    buttonBar->setContentsMargins(0, 4, 0, 0);
     buttonBar->setSpacing(8);
     buttonBar->addStretch();
     buttonBar->addWidget(_advancedSettingsButton);

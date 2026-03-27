@@ -49,6 +49,7 @@ StartupWizardController::StartupWizardController(QObject* parent)
     , _overlay {nullptr}
     , _startupScheduled {false}
     , _startupHandled {false}
+    , _startPageLaunchRequested {false}
 {}
 
 StartupWizardController& StartupWizardController::instance()
@@ -81,6 +82,10 @@ void StartupWizardController::showIfPending()
 
 void StartupWizardController::showManual()
 {
+    if (hasBlockingModalWidget()) {
+        return;
+    }
+
     ensureOverlay();
     if (_overlay) {
         _overlay->showOverlay();
@@ -104,7 +109,18 @@ void StartupWizardController::attemptStartup()
         return;
     }
 
-    if (shouldLaunchStartPage() && !runCommandByName("Start_Start")) {
+    if (shouldLaunchStartPage() && !_startPageLaunchRequested) {
+        if (!runCommandByName("Start_Start")) {
+            scheduleStartup();
+            return;
+        }
+
+        _startPageLaunchRequested = true;
+        QTimer::singleShot(0, this, [this]() { attemptStartup(); });
+        return;
+    }
+
+    if (!isStartupReady()) {
         scheduleStartup();
         return;
     }
@@ -145,8 +161,13 @@ bool StartupWizardController::isStartupReady() const
         return false;
     }
 
+    return !hasBlockingModalWidget();
+}
+
+bool StartupWizardController::hasBlockingModalWidget() const
+{
     auto* activeModal = qApp->activeModalWidget();
-    return activeModal == nullptr || activeModal == _overlay;
+    return activeModal != nullptr && activeModal != _overlay;
 }
 
 void StartupWizardController::ensureOverlay()
@@ -203,14 +224,14 @@ void StartupWizardController::onOverlayDismissed()
 {
     markFirstStartCompleted();
     if (_overlay) {
-        _overlay->hide();
+        _overlay->hideOverlay();
     }
 }
 
 void StartupWizardController::onAdvancedSettingsRequested()
 {
     if (_overlay) {
-        _overlay->hide();
+        _overlay->hideOverlay(false);
     }
 
     runCommandByName("Std_DlgPreferences");

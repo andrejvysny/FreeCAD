@@ -80,7 +80,7 @@ QWidget* createFieldWidget(
 
     auto layout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(fieldWidget));
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(4);
+    layout->setSpacing(6);
     layout->addWidget(label);
     layout->addWidget(helper);
     layout->addWidget(comboBox);
@@ -114,7 +114,7 @@ void GeneralSettingsWidget::setupUi()
 {
     auto mainLayout = gsl::owner<QVBoxLayout*>(new QVBoxLayout(this));
     mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(16);
+    mainLayout->setSpacing(18);
 
     _languageLabel = gsl::owner<QLabel*>(new QLabel);
     _unitSystemLabel = gsl::owner<QLabel*>(new QLabel);
@@ -150,7 +150,7 @@ void GeneralSettingsWidget::setupUi()
 
     auto basicsRow = gsl::owner<QHBoxLayout*>(new QHBoxLayout);
     basicsRow->setContentsMargins(0, 0, 0, 0);
-    basicsRow->setSpacing(12);
+    basicsRow->setSpacing(16);
     basicsRow->addWidget(
         createFieldWidget(
             this,
@@ -172,7 +172,7 @@ void GeneralSettingsWidget::setupUi()
     mainLayout->addLayout(basicsRow);
     auto navigationRow = gsl::owner<QHBoxLayout*>(new QHBoxLayout);
     navigationRow->setContentsMargins(0, 0, 0, 0);
-    navigationRow->setSpacing(12);
+    navigationRow->setSpacing(16);
     navigationRow->addWidget(
         createFieldWidget(
             this,
