@@ -586,7 +586,6 @@ class _TaskPanel:
         yacc.parse(input=f"UserDefinedFormula={userdefined_eq}", lexer=lexer)
         UserDefinedFormula = tokrules.names["UserDefinedFormula"].tolist()
         tokrules.names = {}
-        # UserDefinedFormula = eval(userdefined_eq).tolist()
 
         if UserDefinedFormula:
             self.result_obj.UserDefined = UserDefinedFormula
@@ -606,7 +605,7 @@ class _TaskPanel:
     def result_selected(self, res_type, res_values, res_unit, res_title):
         self.results_name = res_title
         FreeCAD.FEM_dialog["results_type"] = res_type
-        (minm, maxm) = self.get_result_stats(res_type)
+        minm, maxm = self.get_result_stats(res_type)
         self.update_colors_stats(res_values, res_unit, minm, maxm)
 
         if len(plt.get_fignums()) > 0:

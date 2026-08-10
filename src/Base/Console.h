@@ -27,8 +27,12 @@
 
 // Std. configurations
 #include <array>
+#include <atomic>
 #include <cassert>
+#include <chrono>
+#include <functional>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <sstream>
@@ -558,6 +562,15 @@ public:
     template<LogStyle, IntendedRecipient = IntendedRecipient::All, ContentType = ContentType::Untranslated>
     void notify(const std::string& notifiername, const std::string& msg);
 
+    // Runtime (non-template) notify helper.
+    void notify(
+        LogStyle category,
+        IntendedRecipient recipient,
+        ContentType content,
+        const std::string& notifiername,
+        const std::string& msg
+    );
+
     /// Attaches an Observer to FCConsole
     void attachObserver(ILogger* pcObserver);
     /// Detaches an Observer from FCConsole
@@ -584,6 +597,26 @@ public:
         MsgType_Notification = 32,  // Special message to for notifications to the user
     };
 
+    class BaseExport Bridge
+    {
+    public:
+        virtual ~Bridge() = default;
+
+        virtual void postEvent(
+            FreeCAD_ConsoleMsgType type,
+            IntendedRecipient recipient,
+            ContentType content,
+            const std::string& notifiername,
+            const std::string& msg
+        ) const = 0;
+
+        virtual void refresh() const = 0;
+    };
+
+    using PostEventHandler = std::function<
+        void(FreeCAD_ConsoleMsgType, IntendedRecipient, ContentType, const std::string&, const std::string&)>;
+    using RefreshHandler = std::function<void()>;
+
     /// Enables or disables message types of a certain console observer
     ConsoleMsgFlags setEnabledMsgType(const char* sObs, ConsoleMsgFlags type, bool on) const;
     /// Checks if message types of a certain console observer are enabled
@@ -608,35 +641,44 @@ public:
     // retrieval of an observer by name
     ILogger* get(const char* Name) const;
 
-    static PyMethodDef Methods[];
-
     void refresh() const;
     void enableRefresh(bool enable);
+    void setBridge(const Bridge* bridge);
+    const Bridge* getBridge() const;
+    void setPostEventHandler(PostEventHandler handler);
+    void setRefreshHandler(RefreshHandler handler);
 
     constexpr FreeCAD_ConsoleMsgType getConsoleMsg(LogStyle style);
 
 private:
+    friend class ConsoleModulePy;
+
     // python exports goes here +++++++++++++++++++++++++++++++++++++++++++
     // static python wrapper of the exported functions
-    static PyObject* sPyLog(PyObject* self, PyObject* args);
-    static PyObject* sPyMessage(PyObject* self, PyObject* args);
-    static PyObject* sPyWarning(PyObject* self, PyObject* args);
-    static PyObject* sPyDeveloperWarning(PyObject* self, PyObject* args);
-    static PyObject* sPyUserWarning(PyObject* self, PyObject* args);
-    static PyObject* sPyTranslatedUserWarning(PyObject* self, PyObject* args);
-    static PyObject* sPyError(PyObject* self, PyObject* args);
-    static PyObject* sPyDeveloperError(PyObject* self, PyObject* args);
-    static PyObject* sPyUserError(PyObject* self, PyObject* args);
-    static PyObject* sPyTranslatedUserError(PyObject* self, PyObject* args);
-    static PyObject* sPyCritical(PyObject* self, PyObject* args);
-    static PyObject* sPyNotification(PyObject* self, PyObject* args);
-    static PyObject* sPyTranslatedNotification(PyObject* self, PyObject* args);
-    static PyObject* sPySetStatus(PyObject* self, PyObject* args);
-    static PyObject* sPyGetStatus(PyObject* self, PyObject* args);
-    static PyObject* sPyGetObservers(PyObject* self, PyObject* args);
+    static PyObject* sPrintLog(PyObject* self, PyObject* args);
+    static PyObject* sPrintMessage(PyObject* self, PyObject* args);
+    static PyObject* sPrintWarning(PyObject* self, PyObject* args);
+    static PyObject* sPrintDeveloperWarning(PyObject* self, PyObject* args);
+    static PyObject* sPrintUserWarning(PyObject* self, PyObject* args);
+    static PyObject* sPrintTranslatedUserWarning(PyObject* self, PyObject* args);
+    static PyObject* sPrintError(PyObject* self, PyObject* args);
+    static PyObject* sPrintDeveloperError(PyObject* self, PyObject* args);
+    static PyObject* sPrintUserError(PyObject* self, PyObject* args);
+    static PyObject* sPrintTranslatedUserError(PyObject* self, PyObject* args);
+    static PyObject* sPrintCritical(PyObject* self, PyObject* args);
+    static PyObject* sPrintNotification(PyObject* self, PyObject* args);
+    static PyObject* sPrintTranslatedNotification(PyObject* self, PyObject* args);
+    static PyObject* sSetStatus(PyObject* self, PyObject* args);
+    static PyObject* sGetStatus(PyObject* self, PyObject* args);
+    static PyObject* sGetObservers(PyObject* self, PyObject* args);
 
     bool _bCanRefresh {true};
     ConnectionMode connectionMode {Direct};
+
+    std::atomic<const Bridge*> _bridge {nullptr};
+    mutable std::mutex _handlerMutex;
+    PostEventHandler _postEventHandler;
+    RefreshHandler _refreshHandler;
 
     // Singleton!
     ConsoleSingleton();
@@ -673,8 +715,6 @@ private:
 
     std::map<std::string, int> _logLevels;
     int _defaultLogLevel;
-
-    friend class ConsoleOutput;
 };
 
 /** Access to the Console
